@@ -3,7 +3,12 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-      <profile name="Annotation profile for inventory-service" enabled="true">
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+      </profile>
+      <profile name="Annotation profile for tariff-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -12,8 +17,8 @@
         </processorPath>
         <module name="tariff-service" />
         <module name="auth-service" />
-        <module name="inventory-service" />
         <module name="kardex-service" />
+        <module name="inventory-service" />
         <module name="config-service" />
         <module name="customer-service" />
         <module name="gateway-service" />

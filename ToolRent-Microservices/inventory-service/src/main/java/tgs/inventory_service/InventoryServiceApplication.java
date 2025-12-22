@@ -14,7 +14,7 @@ public class InventoryServiceApplication {
 		SpringApplication.run(InventoryServiceApplication.class, args);
 	}
 
-    @Bean // permite hacer @Autowired de RestTemplate en el servicio
+    @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }

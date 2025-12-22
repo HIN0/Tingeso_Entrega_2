@@ -2,10 +2,10 @@ package tgs.discovery_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer; // Ojo a este import
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
 
 @SpringBootApplication
-@EnableEurekaServer // <--- ESTA ES LA CLAVE. No uses @EnableDiscoveryClient aquí.
+@EnableEurekaServer
 public class DiscoveryServiceApplication {
 
 	public static void main(String[] args) {
