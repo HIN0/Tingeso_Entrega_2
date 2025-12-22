@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/auth-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/loan-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/config-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/kardex-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/report-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/tariff-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/gateway-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/customer-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/discovery-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ToolRent-Microservices/inventory-service/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_23" default="true" project-jdk-name="23" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+</project>

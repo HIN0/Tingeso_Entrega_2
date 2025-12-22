@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/auth-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/config-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/customer-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/discovery-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/gateway-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/inventory-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/kardex-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/loan-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/report-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ToolRent-Microservices/tariff-service/src/main/java" charset="UTF-8" />
+  </component>
+</project>
