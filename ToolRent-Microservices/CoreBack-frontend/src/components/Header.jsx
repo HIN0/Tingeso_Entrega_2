@@ -1,38 +1,38 @@
-import { useKeycloak } from "@react-keycloak/web";
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import AuthService from '../services/auth.service';
 
-export default function Header() {
-  const { keycloak, initialized } = useKeycloak();
-  if (!initialized) return null;
+const Header = () => {
+    const navigate = useNavigate();
 
-  const isAuth = !!keycloak?.authenticated;
-  const token = isAuth ? keycloak.tokenParsed : null;
+    const handleLogout = () => {
+        AuthService.logout();
+        navigate("/");
+    };
 
-  const username = token?.preferred_username ?? "Invitado";
-  const email = token?.email ?? "—";
-  const givenName = token?.given_name ?? "";
-  const familyName = token?.family_name ?? "";
-  const roles = Array.isArray(token?.realm_access?.roles) ? token.realm_access.roles : [];
-  const isAdmin = roles.includes("ADMIN");
+    return (
+        <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div className="container-fluid">
+                <Link className="navbar-brand" to="/home">ToolRent</Link>
+                <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span className="navbar-toggler-icon"></span>
+                </button>
+                <div className="collapse navbar-collapse" id="navbarNav">
+                    <ul className="navbar-nav me-auto">
+                        <li className="nav-item"><Link className="nav-link" to="/home">Herramientas</Link></li>
+                        <li className="nav-item"><Link className="nav-link" to="/clients">Clientes</Link></li>
+                        <li className="nav-item"><Link className="nav-link" to="/loans">Arriendos</Link></li>
+                        <li className="nav-item"><Link className="nav-link" to="/kardex">Kardex</Link></li>
+                        <li className="nav-item"><Link className="nav-link" to="/reports">Reportes</Link></li>
+                        <li className="nav-item"><Link className="nav-link" to="/tariffs">Tarifas</Link></li>
+                    </ul>
+                    <div className="d-flex">
+                        <button className="btn btn-outline-danger btn-sm" onClick={handleLogout}>Cerrar Sesión</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    );
+};
 
-  return (
-    <header style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",borderBottom:"1px solid #e5e7eb"}}>
-      <strong>ToolRent</strong>
-      <div style={{marginLeft:"auto", display:"flex", alignItems:"center", gap:10}}>
-        {isAuth && (
-          <>
-            <span>{givenName || familyName ? `${givenName} ${familyName}`.trim() : username}</span>
-            <span style={{opacity:0.7}}>{email}</span>
-            <span style={{padding:"2px 10px",border:"1px solid #9ca3af",borderRadius:999}}>
-              {isAdmin ? "Admin" : "Empleado"}
-            </span>
-            <button onClick={() => keycloak.accountManagement()}>Mi cuenta</button>
-            <button onClick={() => keycloak.logout({ redirectUri: window.location.origin })}>Logout</button>
-          </>
-        )}
-        {!isAuth && (
-          <button onClick={() => keycloak.login()}>Login</button>
-        )}
-      </div>
-    </header>
-  );
-}
+export default Header;
