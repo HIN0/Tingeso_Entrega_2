@@ -7,6 +7,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="gateway-service" />
       </profile>
       <profile name="Annotation profile for tariff-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -21,7 +22,6 @@
         <module name="inventory-service" />
         <module name="config-service" />
         <module name="customer-service" />
-        <module name="gateway-service" />
         <module name="loan-service" />
         <module name="report-service" />
         <module name="discovery-service" />
