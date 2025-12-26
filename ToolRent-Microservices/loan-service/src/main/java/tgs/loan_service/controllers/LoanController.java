@@ -22,16 +22,21 @@ public class LoanController {
         return ResponseEntity.ok(loanService.getAllLoans());
     }
     
-    // Endpoint para solicitar un préstamo
     @PostMapping
-    public ResponseEntity<?> createLoan(@RequestParam Long clientId, 
-                                        @RequestParam Long toolId,
-                                        @RequestHeader(value = "X-User-Name", defaultValue = "admin") String username) {
-        try {
-            LoanEntity loan = loanService.createLoan(clientId, toolId, username);
-            return ResponseEntity.ok(loan);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+        public ResponseEntity<?> createLoan(@RequestParam Long clientId, 
+                                            @RequestParam Long toolId,
+                                            @RequestHeader("X-User-Name") String username,
+                                            @RequestHeader("X-User-Role") String role) {
+            // VALIDACIÓN DE SEGURIDAD
+            if (!"admin".equals(role) && !"empleado".equals(role)) {
+                return ResponseEntity.status(403).body("Acceso denegado: Rol insuficiente");
+            }
+            
+            try {
+                LoanEntity loan = loanService.createLoan(clientId, toolId, username);
+                return ResponseEntity.ok(loan);
+            } catch (RuntimeException e) {
+                return ResponseEntity.badRequest().body(e.getMessage());
+            }
         }
-    }
 }

@@ -53,8 +53,7 @@ public class ToolService {
             try {
                 restTemplate.postForObject(KARDEX_SERVICE_URL, kardexRequest, Void.class);
             } catch (Exception e) {
-                System.err.println("Error al comunicar con Kardex Service: " + e.getMessage());
-                // En un sistema real, aquí manejarías una cola de reintentos (Kafka/RabbitMQ)
+                throw new RuntimeException("Error crítico: No se pudo registrar en Kardex. Operación cancelada.");
             }
         }
         return saved;
@@ -83,7 +82,7 @@ public class ToolService {
         try {
             restTemplate.postForObject(KARDEX_SERVICE_URL, kardexRequest, Void.class);
         } catch (Exception e) {
-            System.err.println("Error comunicando con Kardex: " + e.getMessage());
+            throw new RuntimeException("Error crítico: No se pudo registrar en Kardex. Operación cancelada.");
         }
 
         return saved;
