@@ -24,8 +24,8 @@ public class ClientEntity {
     private String name;
     private String email;
     private String phone;
-
-    // Estado: "ACTIVO" o "RESTRINGIDO"
-    // Regla de negocio: Si está restringido, no puede pedir préstamos.
     private String status; 
+
+    @Column(name = "balance")
+    private Double balance = 0.0;
 }

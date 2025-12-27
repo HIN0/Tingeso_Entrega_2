@@ -37,4 +37,17 @@ public class ClientController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PutMapping("/{id}/balance")
+    public ResponseEntity<ClientEntity> updateBalance(@PathVariable Long id, @RequestParam Double amount) {
+        try {
+            ClientEntity updatedClient = clientService.updateBalance(id, amount);
+            if (updatedClient == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(updatedClient);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

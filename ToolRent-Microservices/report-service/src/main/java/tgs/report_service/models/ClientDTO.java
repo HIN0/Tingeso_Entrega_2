@@ -1,4 +1,4 @@
-package tgs.loan_service.models;
+package tgs.report_service.models;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

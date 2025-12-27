@@ -3,8 +3,6 @@ package tgs.loan_service.services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 
 import tgs.loan_service.entitites.LoanEntity;
 import tgs.loan_service.models.ClientDTO;
@@ -14,7 +12,9 @@ import tgs.loan_service.repositories.LoanRepository;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class LoanService {
@@ -25,70 +25,69 @@ public class LoanService {
     @Autowired
     private RestTemplate restTemplate;
 
-    // Métodos de consulta
+    // USO DE CONSTANTES: Facilita cambiar URLs si te mueves a Kubernetes o cambian los puertos
+    private final String INVENTORY_URL = "http://inventory-service/api/tools";
+    private final String CUSTOMER_URL = "http://customer-service/api/clients";
+    private final String KARDEX_URL = "http://kardex-service/api/kardex";
+    private final String TARIFF_URL = "http://tariff-service/api/tariffs";
+
     public List<LoanEntity> getAllLoans() { return loanRepository.findAll(); }
     
     public List<LoanEntity> getLoansByClient(Long clientId) {
         return loanRepository.findByClientIdAndStatus(clientId, "ACTIVE");
     }
 
-    public LoanEntity createLoan(Long clientId, Long toolId, String username) {
-        // ----------------------------------------------------------------
-        // 1. VALIDACIONES PREVIAS (LECTURA)
-        // ----------------------------------------------------------------
-
-        // 1.1 Validar Cliente (Comunicación con M3 - Customer Service)
-        ClientDTO client = null;
+    // MEJORA: Método privado para registrar en Kardex correctamente
+    private void registerKardex(Long toolId, String type, int quantity, String username) {
         try {
-            client = restTemplate.getForObject("http://customer-service/api/clients/" + clientId, ClientDTO.class);
+            Map<String, Object> request = new HashMap<>();
+            request.put("toolId", toolId);
+            // CORRECCIÓN CRÍTICA: El DTO espera "movementType", no "type"
+            request.put("movementType", type); 
+            request.put("quantity", quantity);
+            request.put("username", username);
+            // La fecha la puede poner el microservicio destino, pero si la envías, asegúrate que el DTO la reciba.
+            // Si KardexDTO no tiene campo fecha, no hace falta enviarla aquí.
+            
+            restTemplate.postForObject(KARDEX_URL, request, Void.class);
         } catch (Exception e) {
-            throw new RuntimeException("Error al conectar con Servicio de Clientes o cliente no existe.");
+            System.err.println("Error reportando a Kardex: " + e.getMessage());
         }
-        
-        if (client == null) throw new RuntimeException("Cliente no encontrado");
-        if ("RESTRINGIDO".equals(client.getStatus())) throw new RuntimeException("Cliente no habilitado para préstamos (RESTRINGIDO)");
+    }
 
-        // 1.2 Validar reglas de negocio locales del cliente
+    public LoanEntity createLoan(Long clientId, Long toolId, String username) {
+        // 1. VALIDACIONES
+        ClientDTO client = restTemplate.getForObject(CUSTOMER_URL + "/" + clientId, ClientDTO.class);
+        if (client == null) throw new RuntimeException("Cliente no existe");
+        
+        // Validación de Estado (RESTRINGIDO por Deuda)
+        if ("RESTRINGIDO".equals(client.getStatus())) {
+            throw new RuntimeException("Cliente no habilitado (RESTRINGIDO). Revise deudas.");
+        }
+
         List<LoanEntity> activeLoans = loanRepository.findByClientIdAndStatus(clientId, "ACTIVE");
         if (activeLoans.size() >= 5) throw new RuntimeException("Cliente excede máximo de 5 préstamos activos");
         
         if (loanRepository.existsByClientIdAndToolIdAndStatus(clientId, toolId, "ACTIVE")) {
-            throw new RuntimeException("Cliente ya tiene esta herramienta en préstamo actualmente");
+            throw new RuntimeException("Cliente ya tiene esta herramienta prestada");
         }
 
-        // 1.3 Validar Herramienta (Comunicación con M1 - Inventory Service)
-        ToolDTO tool = null;
-        try {
-            tool = restTemplate.getForObject("http://inventory-service/api/tools/" + toolId, ToolDTO.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Error al conectar con Servicio de Inventario o herramienta no existe.");
-        }
+        ToolDTO tool = restTemplate.getForObject(INVENTORY_URL + "/" + toolId, ToolDTO.class);
+        if (tool == null || tool.getStock() <= 0) throw new RuntimeException("Herramienta sin stock.");
+
+        // 2. EJECUCIÓN CON SEGURIDAD (SAGA PATTERN)
         
-        if (tool == null) throw new RuntimeException("Herramienta no encontrada");
-        if (tool.getStock() <= 0) throw new RuntimeException("Herramienta sin stock disponible");
-        // Aseguramos que solo se preste si está disponible (o disponible con stock)
-        if (!"AVAILABLE".equals(tool.getStatus())) throw new RuntimeException("Herramienta no disponible para préstamo (Estado: " + tool.getStatus() + ")");
-
-
-        // ----------------------------------------------------------------
-        // 2. EJECUCIÓN CON COMPENSACIÓN (SAGA PATTERN)
-        // ----------------------------------------------------------------
-        
-        // PASO A: Intentar descontar stock en Inventario (Llamada Externa)
-        // Si esto falla, lanzamos error y NO guardamos nada en nuestra BD.
+        // Paso A: Descontar Stock (Llamada externa)
         try {
-            // Nota: Se agrega 'username' en la query string si el endpoint de Inventory lo soporta, para trazabilidad en Kardex
-            restTemplate.put("http://inventory-service/api/tools/" + toolId + "/stock?quantity=-1&username=" + username, null);
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new RuntimeException("Error al descontar stock en Inventario: " + e.getResponseBodyAsString());
+            restTemplate.put(INVENTORY_URL + "/" + toolId + "/stock?quantity=-1&username=" + username, null);
         } catch (Exception e) {
-            throw new RuntimeException("Error de conexión al intentar descontar stock: " + e.getMessage());
+            throw new RuntimeException("Error al conectar con Inventario: " + e.getMessage());
         }
 
-        // PASO B: Guardar el Préstamo en BD Local
+        // Paso B: Guardar Préstamo Localmente
         LoanEntity newLoan = LoanEntity.builder()
                 .loanDate(LocalDate.now())
-                .deadlineDate(LocalDate.now().plusDays(7))
+                .deadlineDate(LocalDate.now().plusDays(7)) 
                 .status("ACTIVE")
                 .clientId(clientId)
                 .toolId(toolId)
@@ -98,89 +97,75 @@ public class LoanService {
         try {
             savedLoan = loanRepository.save(newLoan);
         } catch (Exception e) {
-            // !!! CRÍTICO: Si falla el guardado local, debemos COMPENSAR (deshacer) el cambio en inventario !!!
-            System.err.println("Error guardando préstamo localmente. Iniciando Rollback en Inventario...");
-            try {
-                // Rollback: Sumamos 1 al stock para dejarlo como estaba
-                restTemplate.put("http://inventory-service/api/tools/" + toolId + "/stock?quantity=1&username=" + username, null);
-            } catch (Exception rollbackEx) {
-                // Si falla el rollback, estamos en problemas graves (Inconsistencia de datos).
-                // En producción esto se enviaría a una cola de errores o log de alertas críticas.
-                System.err.println("FATAL: Falló el rollback de stock para herramienta " + toolId + ". Inconsistencia detectada.");
-            }
-            throw new RuntimeException("Error interno al crear el préstamo. Se ha revertido el stock.");
+            // MEJORA CRÍTICA: ROLLBACK
+            // Si falló guardar en MI base de datos, debo devolver el stock al inventario
+            // para no generar inconsistencia (herramienta perdida).
+            System.err.println("Fallo al guardar préstamo local. Reviertiendo stock...");
+            restTemplate.put(INVENTORY_URL + "/" + toolId + "/stock?quantity=1&username=" + username, null);
+            throw new RuntimeException("Error interno al procesar el préstamo. Intente nuevamente.");
         }
+
+        // Paso C: Registrar en Kardex
+        registerKardex(toolId, "PRESTAMO", 1, username); // Envia cantidad positiva, el tipo define si resta
+
         return savedLoan;
     }
 
     public LoanEntity returnLoan(Long loanId, String username) {
-        // 1. Obtener Préstamo
         LoanEntity loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Préstamo no encontrado"));
 
-        if (!"ACTIVE".equals(loan.getStatus())) {
-            throw new RuntimeException("El préstamo no está activo (Estado actual: " + loan.getStatus() + ")");
-        }
+        if (!"ACTIVE".equals(loan.getStatus())) throw new RuntimeException("Préstamo ya cerrado");
 
-        // 2. Calcular Fechas y Multas (RF2.4)
+        // 1. Cálculos
         LocalDate returnDate = LocalDate.now();
         loan.setReturnDate(returnDate);
 
-        // Obtener tarifas actuales (Comunicación con M4)
         TariffDTO tariff;
         try {
-            tariff = restTemplate.getForObject("http://tariff-service/api/tariffs", TariffDTO.class);
+            tariff = restTemplate.getForObject(TARIFF_URL, TariffDTO.class);
         } catch (Exception e) {
-            // Si falla el servicio de tarifas, usamos valores por defecto o lanzamos error.
-            // Para seguridad del negocio, mejor lanzar error.
-            throw new RuntimeException("Error obteniendo tarifas para calcular pagos.");
+            // Fallback seguro si falla tarifa
+            tariff = new TariffDTO(); 
+            tariff.setDailyRentFee(1000); 
+            tariff.setDailyLateFee(2000);
         }
 
-        // Cálculos de costos (Para mostrar al frontend o guardar histórico si existiera campo)
         long daysRented = ChronoUnit.DAYS.between(loan.getLoanDate(), returnDate);
-        if (daysRented < 1) daysRented = 1; // Cobro mínimo 1 día
+        if (daysRented < 1) daysRented = 1;
 
         long daysOverdue = 0;
         if (returnDate.isAfter(loan.getDeadlineDate())) {
             daysOverdue = ChronoUnit.DAYS.between(loan.getDeadlineDate(), returnDate);
         }
 
-        double rentCost = daysRented * tariff.getDailyRentFee();
-        double lateFee = daysOverdue * tariff.getDailyLateFee();
-        double totalToPay = rentCost + lateFee;
+        double totalToPay = (daysRented * tariff.getDailyRentFee()) + (daysOverdue * tariff.getDailyLateFee());
 
-        // NOTA: Aquí podrías guardar 'totalToPay' si agregaras un campo 'paidAmount' a la entidad LoanEntity.
-        // Por ahora, seguimos la estructura actual y solo cerramos el préstamo.
-
-        // 3. Actualizar Stock en Inventario (Saga Step 1: External)
-        // Sumamos 1 al stock. El microservicio de inventario se encarga de ponerla AVAILABLE.
-        try {
-            restTemplate.put("http://inventory-service/api/tools/" + loan.getToolId() + "/stock?quantity=1&username=" + username, null);
-        } catch (Exception e) {
-            throw new RuntimeException("Error al devolver stock al inventario: " + e.getMessage());
-        }
-
-        // 4. Guardar Cambios en Préstamo (Saga Step 2: Local)
-        loan.setStatus("RETURNED");
-        
-        LoanEntity savedLoan;
-        try {
-            savedLoan = loanRepository.save(loan);
-        } catch (Exception e) {
-            // ROLLBACK MANUAL: Si falla guardar el estado RETURNED, debemos volver a restar el stock
-            // para que no quede la herramienta disponible mientras el préstamo sigue activo.
-            System.err.println("Error guardando devolución. Iniciando compensación de stock...");
+        // 2. Registrar Deuda en Cliente
+        if (totalToPay > 0) {
             try {
-                restTemplate.put("http://inventory-service/api/tools/" + loan.getToolId() + "/stock?quantity=-1&username=" + username, null);
-            } catch (Exception rollbackEx) {
-                System.err.println("FATAL: Inconsistencia en devolución préstamo ID " + loanId);
+                restTemplate.put(CUSTOMER_URL + "/" + loan.getClientId() + "/balance?amount=" + totalToPay, null);
+            } catch (Exception e) {
+                System.err.println("Error actualizando saldo cliente: " + e.getMessage());
             }
-            throw new RuntimeException("Error interno al registrar devolución.");
         }
 
-        return savedLoan; 
-        // En una implementación real, aquí devolverías un DTO con el desglose de lo que debe pagar el cliente (rentCost, lateFee).
+        // 3. Devolver Stock
+        try {
+            restTemplate.put(INVENTORY_URL + "/" + loan.getToolId() + "/stock?quantity=1&username=" + username, null);
+        } catch (Exception e) {
+             // Aquí es más complejo hacer rollback porque ya cobraste deuda.
+             // Se asume eventual consistency o alerta manual.
+            System.err.println("Error crítico devolviendo stock: " + e.getMessage());
+        }
+
+        // 4. Cerrar Préstamo
+        loan.setStatus("RETURNED");
+        LoanEntity savedLoan = loanRepository.save(loan);
+
+        // 5. Kardex
+        registerKardex(loan.getToolId(), "DEVOLUCION", 1, username);
+
+        return savedLoan;
     }
-
-
 }
