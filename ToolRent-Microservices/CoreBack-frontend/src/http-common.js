@@ -1,13 +1,14 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "http://localhost:8080", 
+const toolRentApi = axios.create({
+  baseURL: "http://localhost:8080",
   headers: {
-    "Content-type": "application/json"
-  }
+    "Content-Type": "application/json",
+  },
 });
 
-api.interceptors.request.use(
+// INTERCEPTOR DE REQUEST
+toolRentApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -20,4 +21,4 @@ api.interceptors.request.use(
   }
 );
 
-export default api;
+export default toolRentApi;

@@ -24,8 +24,18 @@ class ToolService {
 
   // --- MÉTODO ADJUST STOCK ---
   adjustStock(id, data) {
-      // data debe ser { quantityChange: number }
-      return http.patch(`api/tools/${id}/stock`, data);
+    // 1. Extraemos el valor del objeto que envía React
+      const quantity = data.quantityChange; 
+  
+      // 2. Usamos 'http' (NO httpClient)
+      // 3. Usamos .put (Tu backend es @PutMapping)
+      // 4. Enviamos como 'params' para que la URL sea: .../stock?quantity=5
+      return http.put(`api/tools/${id}/stock`, null, {
+          params: { 
+              quantity: quantity 
+          }
+      });
+
   }
 
   // --- MÉTODO DECOMMISSION ---

@@ -2,14 +2,19 @@ package tgs.inventory_service.services;
 
 import tgs.inventory_service.entities.ToolEntity;
 import tgs.inventory_service.entities.ToolStatus;
-import tgs.inventory_service.models.KardexDTO;
 import tgs.inventory_service.repositories.ToolRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-import java.util.List;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class ToolService {
 
@@ -19,7 +24,7 @@ public class ToolService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private final String KARDEX_SERVICE_URL = "http://kardex-service/api/kardex";
+    private final String KARDEX_SERVICE_URL = "http://KARDEX-SERVICE/api/kardex";
 
     public List<ToolEntity> getAllTools() { return toolRepository.findAll(); }
 
@@ -83,12 +88,22 @@ public class ToolService {
         return saved;
     }
 
-    private void reportKardex(String type, Long toolId, int quantity, String username) {
+    // En inventory-service: ToolService.java
+    private void reportKardex(String movementType, Long toolId, int quantity, String username) {
         try {
-            KardexDTO kardexRequest = new KardexDTO(type, toolId, quantity, username);
+            // Creamos un mapa o un objeto con los nombres exactos que espera el controlador de Kardex
+            Map<String, Object> kardexRequest = new HashMap<>();
+            kardexRequest.put("toolId", toolId);
+            kardexRequest.put("movementType", movementType);
+            kardexRequest.put("quantity", quantity);
+            kardexRequest.put("username", username);
+
             restTemplate.postForObject(KARDEX_SERVICE_URL, kardexRequest, Void.class);
+            log.info("Kardex reportado exitosamente para herramienta: {}", toolId);
         } catch (Exception e) {
-            System.err.println("Error reportando a Kardex: " + e.getMessage());
+            log.error("Error al reportar al Kardex: " + e.getMessage());
         }
     }
+
+
 }

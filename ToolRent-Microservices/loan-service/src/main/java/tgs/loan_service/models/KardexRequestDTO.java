@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class KardexDTO {
-    private String movementType;
+public class KardexRequestDTO {
     private Long toolId;
-    private Integer quantity;
+    private String movementType;
+    private int quantity;
     private String username;
 }
