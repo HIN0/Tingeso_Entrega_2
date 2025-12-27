@@ -18,13 +18,12 @@ public class LoanEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private LocalDate loanDate;      // Fecha inicio
+    private LocalDate loanDate;      // Fecha inicio préstamo (startDate)
     private LocalDate deadlineDate;  // Fecha pactada devolución
     private LocalDate returnDate;    // Fecha real devolución (puede ser null)
     
-    private String status; // "ACTIVE", "RETURNED", "OVERDUE"
+    private String status;
 
-    // --- CAMBIO CLAVE: Guardamos IDs, no objetos ---
     private Long clientId;
     private Long toolId;
 }

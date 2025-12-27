@@ -1,9 +1,14 @@
 package tgs.loan_service.models;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class TariffDTO {
-    private int dailyRentFee;
-    private int dailyLateFee;
+    private Integer dailyRentFee;
+    private Integer dailyLateFee;
+    private Integer repairFee;
 }

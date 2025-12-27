@@ -9,7 +9,7 @@ public class LoanDTO {
     private LocalDate loanDate;
     private LocalDate deadlineDate;
     private LocalDate returnDate;
-    private String status; // ACTIVE, RETURNED, OVERDUE
-    private Long toolId;
+    private String status; 
     private Long clientId;
+    private Long toolId;
 }

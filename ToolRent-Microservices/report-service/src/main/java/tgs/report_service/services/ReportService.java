@@ -4,15 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import tgs.report_service.models.*;
-
-// --- ESTOS IMPORTS ERAN LOS QUE FALTABAN ---
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
-// -------------------------------------------
 
 @Service
 public class ReportService {
@@ -20,29 +13,27 @@ public class ReportService {
     @Autowired
     private RestTemplate restTemplate;
 
-    // Nombres de servicio tal cual aparecen en Eureka
     private final String LOAN_URL = "http://loan-service/api/loans";
     private final String CUSTOMER_URL = "http://customer-service/api/clients";
     
-    // 1. Reporte de Préstamos Activos
+    // CORRECCIÓN: Usar endpoint filtrado si existe, o manejar nulls seguramente
     public List<LoanDTO> getActiveLoans() {
-        // Obtenemos un Array [] porque RestTemplate no maneja bien List<?> genéricas directamente
+        // Idealmente: GET /api/loans/search?status=ACTIVE
+        // Por ahora, mantendremos la lógica pero con validación de nulos robusta
         LoanDTO[] loans = restTemplate.getForObject(LOAN_URL, LoanDTO[].class);
         if (loans == null) return new ArrayList<>();
         
         return Arrays.stream(loans)
-                .filter(l -> "ACTIVE".equals(l.getStatus()))
+                .filter(l -> "ACTIVE".equalsIgnoreCase(l.getStatus()))
                 .collect(Collectors.toList());
     }
 
-    // 2. Reporte de Clientes con Atrasos/Deudas
     public List<ClientDTO> getDelinquentClients() {
         ClientDTO[] clients = restTemplate.getForObject(CUSTOMER_URL, ClientDTO[].class);
         if (clients == null) return new ArrayList<>();
 
-        // Filtramos clientes que tengan deuda (balance > 0)
         return Arrays.stream(clients)
-                .filter(c -> c.getBalance() != null && c.getBalance() > 0)
+                .filter(c -> "RESTRICTED".equalsIgnoreCase(c.getStatus()) || (c.getBalance() != null && c.getBalance() > 0))
                 .collect(Collectors.toList());
     }
 

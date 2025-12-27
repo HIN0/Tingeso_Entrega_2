@@ -6,6 +6,9 @@ import lombok.Data;
 public class ToolDTO {
     private Long id;
     private String name;
-    private String status; // AVAILABLE, LOANED, etc.
+    private String category;
+    private String status;
     private Integer stock;
+    private Integer inRepair;
+    private Integer replacementValue;
 }

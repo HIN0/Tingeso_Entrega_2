@@ -4,12 +4,10 @@ import tgs.inventory_service.entities.ToolEntity;
 import tgs.inventory_service.entities.ToolStatus;
 import tgs.inventory_service.models.KardexDTO;
 import tgs.inventory_service.repositories.ToolRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-
 import java.util.List;
 
 @Service
@@ -21,41 +19,21 @@ public class ToolService {
     @Autowired
     private RestTemplate restTemplate;
 
-    // Asegúrate de que este nombre coincida con el registrado en Eureka (o usa localhost:8080 si pruebas local sin gateway)
     private final String KARDEX_SERVICE_URL = "http://kardex-service/api/kardex";
 
-    public List<ToolEntity> getAllTools() {
-        return toolRepository.findAll();
-    }
+    public List<ToolEntity> getAllTools() { return toolRepository.findAll(); }
 
-    public ToolEntity getToolById(Long id) {
-        return toolRepository.findById(id).orElse(null);
-    }
+    public ToolEntity getToolById(Long id) { return toolRepository.findById(id).orElse(null); }
 
     @Transactional
     public ToolEntity createTool(ToolEntity tool, String username) {
-        // Validación de valores nulos para evitar NullPointerException
         if (tool.getInRepair() == null) tool.setInRepair(0);
-        
-        // 2. Usar ToolStatus.AVAILABLE (Enum)
-        if (tool.getStatus() == null) {
-            tool.setStatus(ToolStatus.AVAILABLE);
-        } else if (tool.getStock() > 0 && tool.getStatus() != ToolStatus.AVAILABLE) {
-            // Si hay stock, forzamos a que esté disponible
-            tool.setStatus(ToolStatus.AVAILABLE);
-        }
+        if (tool.getStatus() == null) tool.setStatus(ToolStatus.AVAILABLE);
 
         ToolEntity saved = toolRepository.save(tool);
 
-        // Integración con Kardex
         if (saved.getStock() > 0) {
-            // Asumiendo que KardexDTO acepta Strings para el tipo de movimiento.
-            KardexDTO kardexRequest = new KardexDTO("INCOME", saved.getId(), saved.getStock(), username);
-            try {
-                restTemplate.postForObject(KARDEX_SERVICE_URL, kardexRequest, Void.class);
-            } catch (Exception e) {
-                throw new RuntimeException("Error crítico: No se pudo registrar en Kardex. Operación cancelada.");
-            }
+            reportKardex("INCOME", saved.getId(), saved.getStock(), username);
         }
         return saved;
     }
@@ -63,36 +41,54 @@ public class ToolService {
     @Transactional
     public ToolEntity updateStock(Long id, int quantity, String username) {
         ToolEntity tool = getToolById(id);
-        if (tool == null) return null;
+        if (tool == null) throw new RuntimeException("Herramienta no encontrada");
 
         int newStock = tool.getStock() + quantity;
-        if (newStock < 0) throw new RuntimeException("El stock no puede ser negativo");
+        if (newStock < 0) throw new RuntimeException("Stock insuficiente");
 
         tool.setStock(newStock);
 
-        // 3. CORRECCIÓN: Lógica de estados usando Enums
-        // Si el stock sube y no estaba en reparación, pasa a disponible
-        if (newStock > 0 && tool.getStatus() != ToolStatus.REPAIRING) {
+        // Lógica automática de estados basada en stock
+        if (newStock > 0 && tool.getStatus() != ToolStatus.REPAIRING && tool.getStatus() != ToolStatus.DECOMMISSIONED) {
             tool.setStatus(ToolStatus.AVAILABLE);
-        } 
-        // Si el stock llega a 0, técnicamente se prestó (si quantity < 0)
-        else if (newStock == 0) {
-            // Aquí asumo que si el stock baja a 0 es porque se prestó.
-            // Si el enum tiene "LOANED", lo usamos.
+        } else if (newStock == 0 && quantity < 0) {
             tool.setStatus(ToolStatus.LOANED);
         }
-        
+
         ToolEntity saved = toolRepository.save(tool);
-        
-        // Integración con Kardex (M5)
-        String type = quantity > 0 ? "INCOME" : "MANUAL_DECREASE";         
-        KardexDTO kardexRequest = new KardexDTO(type, saved.getId(), Math.abs(quantity), username);
-        try {
-            restTemplate.postForObject(KARDEX_SERVICE_URL, kardexRequest, Void.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Error crítico: No se pudo registrar en Kardex. Operación cancelada.");
-        }
+        String type = quantity > 0 ? "RETURN_STOCK" : "LOAN_OUT"; // Más descriptivo
+        reportKardex(type, saved.getId(), Math.abs(quantity), username);
 
         return saved;
+    }
+
+    // NUEVO MÉTODO: Para manejar Daños y Bajas (RF1.2)
+    @Transactional
+    public ToolEntity changeStatus(Long id, String newStatusStr, String username) {
+        ToolEntity tool = getToolById(id);
+        if (tool == null) return null;
+
+        ToolStatus newStatus;
+        try {
+            newStatus = ToolStatus.valueOf(newStatusStr); // Espera "REPAIRING", "DECOMMISSIONED", "AVAILABLE"
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Estado inválido: " + newStatusStr);
+        }
+
+        tool.setStatus(newStatus);
+        ToolEntity saved = toolRepository.save(tool);
+
+        // Registrar en Kardex el cambio de estado (ej. BAJA)
+        reportKardex("STATUS_CHANGE_" + newStatusStr, saved.getId(), 0, username);
+        return saved;
+    }
+
+    private void reportKardex(String type, Long toolId, int quantity, String username) {
+        try {
+            KardexDTO kardexRequest = new KardexDTO(type, toolId, quantity, username);
+            restTemplate.postForObject(KARDEX_SERVICE_URL, kardexRequest, Void.class);
+        } catch (Exception e) {
+            System.err.println("Error reportando a Kardex: " + e.getMessage());
+        }
     }
 }

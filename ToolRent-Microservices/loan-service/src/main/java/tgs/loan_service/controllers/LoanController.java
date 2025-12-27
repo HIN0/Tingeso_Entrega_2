@@ -39,4 +39,17 @@ public class LoanController {
                 return ResponseEntity.badRequest().body(e.getMessage());
             }
         }
+
+    @PostMapping("/{id}/return")
+    public ResponseEntity<LoanEntity> returnLoan(
+        @PathVariable Long id, 
+        @RequestParam String username, 
+        @RequestParam(defaultValue = "GOOD") String condition) {
+        try {
+            LoanEntity loan = loanService.returnLoan(id, username, condition);
+            return ResponseEntity.ok(loan);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
 }

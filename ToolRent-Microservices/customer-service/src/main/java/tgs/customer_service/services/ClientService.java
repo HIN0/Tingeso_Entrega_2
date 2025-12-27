@@ -25,9 +25,8 @@ public class ClientService {
         if (clientRepository.findByRut(client.getRut()) != null) {
             throw new RuntimeException("El RUT ya existe");
         }
-        // Regla de negocio: Cliente nuevo nace ACTIVO
-        if (client.getStatus() == null) {
-            client.setStatus("ACTIVO");
+        if (client.getStatus() == null || client.getStatus().isEmpty()) {
+            client.setStatus("ACTIVE");
         }
         return clientRepository.save(client);
     }
@@ -42,21 +41,20 @@ public class ClientService {
     }
 
     public ClientEntity updateBalance(Long id, Double amount) {
-    ClientEntity client = getClientById(id);
-    if (client != null) {
-        // Sumamos (o restamos si el monto es negativo) al saldo actual
-        double current = client.getBalance() == null ? 0.0 : client.getBalance();
-        client.setBalance(current + amount);
-        
-        // Regla de Negocio: Si debe dinero, pasa a RESTRINGIDO? 
-        // El enunciado dice "Restringido (no puede hasta regularizar atrasos)"
-        if (client.getBalance() > 0) {
-            client.setStatus("RESTRINGIDO");
-        } else {
-            client.setStatus("ACTIVE");
+        ClientEntity client = getClientById(id);
+        if (client != null) {
+            double current = client.getBalance() == null ? 0.0 : client.getBalance();
+            client.setBalance(current + amount);
+            
+            // Regla de Negocio RF3.2: Si debe dinero (>0), pasa a RESTRINGIDO (RESTRICTED).
+            // Si salda la deuda (<=0), vuelve a ACTIVE.
+            if (client.getBalance() > 0) {
+                client.setStatus("RESTRICTED");
+            } else {
+                client.setStatus("ACTIVE");
+            }
+            return clientRepository.save(client);
         }
-        return clientRepository.save(client);
-    }
-    return null;
+        return null;
     }
 }
