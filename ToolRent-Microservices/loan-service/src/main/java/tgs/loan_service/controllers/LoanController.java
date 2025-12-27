@@ -1,11 +1,10 @@
 package tgs.loan_service.controllers;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import tgs.loan_service.entitites.LoanEntity;
+import tgs.loan_service.models.ReturnLoanDTO;
 import tgs.loan_service.services.LoanService;
 
 import java.util.List;
@@ -18,38 +17,42 @@ public class LoanController {
     private LoanService loanService;
 
     @GetMapping
-    public ResponseEntity<List<LoanEntity>> getAllLoans() {
+    public ResponseEntity<List<LoanEntity>> getAll() {
         return ResponseEntity.ok(loanService.getAllLoans());
     }
-    
+
+    // Endpoint para CREAR préstamo
     @PostMapping
-        public ResponseEntity<?> createLoan(@RequestParam Long clientId, 
-                                            @RequestParam Long toolId,
-                                            @RequestHeader("X-User-Name") String username,
-                                            @RequestHeader("X-User-Role") String role) {
-            // VALIDACIÓN DE SEGURIDAD
-            if (!"admin".equals(role) && !"empleado".equals(role)) {
-                return ResponseEntity.status(403).body("Acceso denegado: Rol insuficiente");
-            }
-            
-            try {
-                LoanEntity loan = loanService.createLoan(clientId, toolId, username);
-                return ResponseEntity.ok(loan);
-            } catch (RuntimeException e) {
-                return ResponseEntity.badRequest().body(e.getMessage());
+    public ResponseEntity<LoanEntity> createLoan(
+            @RequestParam Long clientId, 
+            @RequestParam Long toolId, 
+            @RequestHeader(value = "X-User-Name", defaultValue = "admin") String username) {
+        // Nota: Asumimos que el Gateway o un Filtro pasa el usuario en el header. 
+        // Si no tienes seguridad implementada aún, usa un valor por defecto.
+        return ResponseEntity.ok(loanService.createLoan(clientId, toolId, username));
+    }
+
+    // Endpoint para DEVOLVER préstamo (Aquí está la magia de la integración)
+    @PutMapping("/{id}/return")
+    public ResponseEntity<LoanEntity> returnLoan(
+            @PathVariable Long id,
+            @RequestBody ReturnLoanDTO dto,
+            @RequestHeader(value = "X-User-Name", defaultValue = "admin") String username) {
+        
+        // 1. Traducir los booleanos del Frontend a la Condición del Backend
+        String condition = "GOOD";
+        if (Boolean.TRUE.equals(dto.getDamaged())) {
+            condition = "DAMAGED";
+            if (Boolean.TRUE.equals(dto.getIrreparable())) {
+                condition = "DESTROYED";
             }
         }
 
-    @PostMapping("/{id}/return")
-    public ResponseEntity<LoanEntity> returnLoan(
-        @PathVariable Long id, 
-        @RequestParam String username, 
-        @RequestParam(defaultValue = "GOOD") String condition) {
-        try {
-            LoanEntity loan = loanService.returnLoan(id, username, condition);
-            return ResponseEntity.ok(loan);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(null);
-        }
+        // 2. Llamar al servicio corregido
+        // Nota: Ignoramos dto.getReturnDate() por seguridad (usamos LocalDate.now() en el servicio),
+        // o puedes modificar el servicio para aceptarla si es un requerimiento permitir fechas pasadas.
+        LoanEntity loan = loanService.returnLoan(id, username, condition);
+        
+        return ResponseEntity.ok(loan);
     }
 }

@@ -3,17 +3,18 @@ package tgs.loan_service.services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
 import tgs.loan_service.entitites.LoanEntity;
+
 import tgs.loan_service.models.ClientDTO;
 import tgs.loan_service.models.ToolDTO;
 import tgs.loan_service.models.TariffDTO;
+import tgs.loan_service.models.KardexDTO;
 import tgs.loan_service.repositories.LoanRepository;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class LoanService {
@@ -150,15 +151,11 @@ public class LoanService {
     }
 
     private void registerKardex(Long toolId, String type, int qty, String user) {
-        Map<String, Object> req = new HashMap<>();
-        req.put("toolId", toolId);
-        req.put("movementType", type); // Nombre exacto que espera KardexEntity
-        req.put("quantity", qty);
-        req.put("username", user);
-        try {
-            restTemplate.postForObject(KARDEX_URL, req, Void.class);
-        } catch (Exception e) {
-            System.err.println("Kardex error: " + e.getMessage());
+            try {
+                KardexDTO kardexRequest = new KardexDTO(type, toolId, qty, user);
+                restTemplate.postForObject(KARDEX_URL, kardexRequest, Void.class);
+            } catch (Exception e) {
+                System.err.println("Error reportando a Kardex: " + e.getMessage());
+            }
         }
-    }
 }

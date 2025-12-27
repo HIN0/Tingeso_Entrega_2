@@ -1,12 +1,12 @@
 package tgs.auth_service.security;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import tgs.auth_service.entities.UserEntity;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -19,8 +19,8 @@ public class JwtProvider {
 
     @PostConstruct
     protected void init() {
-        // Genera una clave segura aleatoria en cada reinicio (para dev es suficiente)
-        secret = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        String secretStr = "secret_key_super_segura_para_tingeso_evaluacion_2025_tgs";
+        secret = Keys.hmacShaKeyFor(secretStr.getBytes(StandardCharsets.UTF_8));
     }
 
     public String createToken(UserEntity authUser) {
