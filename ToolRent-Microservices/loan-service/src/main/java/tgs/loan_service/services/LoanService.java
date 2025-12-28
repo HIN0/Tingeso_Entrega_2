@@ -10,11 +10,13 @@ import tgs.loan_service.models.ClientDTO;
 import tgs.loan_service.models.ToolDTO;
 import tgs.loan_service.models.TariffDTO;
 import tgs.loan_service.models.KardexDTO;
+import tgs.loan_service.models.LoanDetailDTO;
 import tgs.loan_service.repositories.LoanRepository;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class LoanService {
@@ -158,4 +160,47 @@ public class LoanService {
                 System.err.println("Error reportando a Kardex: " + e.getMessage());
             }
         }
+
+    public List<LoanDetailDTO> findAllWithDetails() {
+        // 1. Obtener todos los préstamos de la BD local
+        List<LoanEntity> loans = loanRepository.findAll();
+        
+        // 2. Convertir cada entidad a DTO buscando los nombres
+        return loans.stream().map(loan -> {
+            LoanDetailDTO dto = new LoanDetailDTO();
+            dto.setId(loan.getId());
+            dto.setLoanDate(loan.getLoanDate());
+            dto.setDeadlineDate(loan.getDeadlineDate());
+            dto.setReturnDate(loan.getReturnDate());
+            dto.setStatus(loan.getStatus());
+            dto.setClientId(loan.getClientId());
+            dto.setToolId(loan.getToolId());
+
+            // --- BUSCAR NOMBRE DEL CLIENTE ---
+            try {
+                // Llamada al microservicio de clientes
+                ClientDTO client = restTemplate.getForObject(
+                    "http://customer-service/api/clients/" + loan.getClientId(), 
+                    ClientDTO.class
+                );
+                dto.setClientName(client != null ? client.getName() : "Desconocido");
+            } catch (Exception e) {
+                dto.setClientName("Error al cargar cliente");
+            }
+
+            // --- BUSCAR NOMBRE DE LA HERRAMIENTA ---
+            try {
+                // Llamada al microservicio de inventario
+                ToolDTO tool = restTemplate.getForObject(
+                    "http://inventory-service/api/tools/" + loan.getToolId(), 
+                    ToolDTO.class
+                );
+                dto.setToolName(tool != null ? tool.getName() : "Desconocido");
+            } catch (Exception e) {
+                dto.setToolName("Error al cargar herramienta");
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
 }

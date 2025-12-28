@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tgs.loan_service.entitites.LoanEntity;
+import tgs.loan_service.models.LoanDetailDTO;
 import tgs.loan_service.models.ReturnLoanDTO;
 import tgs.loan_service.services.LoanService;
 
@@ -16,9 +17,20 @@ public class LoanController {
     @Autowired
     private LoanService loanService;
 
+
+    //@GetMapping
+    //public ResponseEntity<List<LoanEntity>> getAll() {
+        //return ResponseEntity.ok(loanService.getAllLoans());
+    //}
+
+
     @GetMapping
-    public ResponseEntity<List<LoanEntity>> getAll() {
-        return ResponseEntity.ok(loanService.getAllLoans());
+    public ResponseEntity<List<LoanDetailDTO>> getAllLoans() {
+        List<LoanDetailDTO> loans = loanService.findAllWithDetails();
+        if (loans.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(loans);
     }
 
     // Endpoint para CREAR préstamo
