@@ -2,16 +2,14 @@ package tgs.inventory_service.services;
 
 import tgs.inventory_service.entities.ToolEntity;
 import tgs.inventory_service.entities.ToolStatus;
+import tgs.inventory_service.models.KardexDTO;
 import tgs.inventory_service.repositories.ToolRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -23,8 +21,6 @@ public class ToolService {
 
     @Autowired
     private RestTemplate restTemplate;
-
-    private final String KARDEX_SERVICE_URL = "http://KARDEX-SERVICE/api/kardex";
 
     public List<ToolEntity> getAllTools() { return toolRepository.findAll(); }
 
@@ -87,23 +83,21 @@ public class ToolService {
         reportKardex("STATUS_CHANGE_" + newStatusStr, saved.getId(), 0, username);
         return saved;
     }
-
-    // En inventory-service: ToolService.java
-    private void reportKardex(String movementType, Long toolId, int quantity, String username) {
+    
+    private void reportKardex(String type, Long toolId, int quantity, String username) {
         try {
-            // Creamos un mapa o un objeto con los nombres exactos que espera el controlador de Kardex
-            Map<String, Object> kardexRequest = new HashMap<>();
-            kardexRequest.put("toolId", toolId);
-            kardexRequest.put("movementType", movementType);
-            kardexRequest.put("quantity", quantity);
-            kardexRequest.put("username", username);
+            KardexDTO request = new KardexDTO();
+            request.setMovementType(type);
+            request.setToolId(toolId);
+            request.setQuantity(Math.abs(quantity)); // En Kardex solemos guardar cantidades positivas y el tipo indica la acción
+            request.setUsername(username);
 
-            restTemplate.postForObject(KARDEX_SERVICE_URL, kardexRequest, Void.class);
-            log.info("Kardex reportado exitosamente para herramienta: {}", toolId);
+            // Usar POST con el objeto DTO directamente
+            restTemplate.postForObject("http://KARDEX-SERVICE/api/kardex", request, Void.class);
+            log.info("Envío a Kardex exitoso: {} unidades de herramienta {}", quantity, toolId);
         } catch (Exception e) {
-            log.error("Error al reportar al Kardex: " + e.getMessage());
+            // Esto te dirá exactamente si el error es de validación (400) o de red (500)
+            log.error("Fallo crítico en comunicación con Kardex. Causa: {}", e.getMessage());
         }
     }
-
-
-}
+}                  

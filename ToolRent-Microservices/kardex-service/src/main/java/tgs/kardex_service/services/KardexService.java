@@ -27,4 +27,7 @@ public class KardexService {
         }
         return kardexRepository.save(kardex);
     }
+    public KardexEntity saveEntry(KardexEntity entry) {
+        return kardexRepository.save(entry);
+    }
 }

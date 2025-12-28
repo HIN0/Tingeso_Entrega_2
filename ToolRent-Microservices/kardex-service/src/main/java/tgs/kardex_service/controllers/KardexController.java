@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -26,7 +27,21 @@ public class KardexController {
     }
 
     @PostMapping
-    public ResponseEntity<KardexEntity> createMovement(@RequestBody KardexEntity kardex) {
-        return ResponseEntity.ok(kardexService.registerMovement(kardex));
+    public ResponseEntity<?> createEntry(@RequestBody KardexEntity entry) {
+        try {
+            // RECTIFICACIÓN: Asegurar valores mínimos antes de guardar
+            if (entry.getDate() == null) {
+                entry.setDate(LocalDate.now());
+            }
+            // Evitar que JPA falle por campos nulos opcionales
+            if (entry.getStockAfter() == 0) {
+                entry.setStockAfter(0); 
+            }
+            
+            KardexEntity saved = kardexService.saveEntry(entry);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error al procesar JSON: " + e.getMessage());
+        }
     }
 }
