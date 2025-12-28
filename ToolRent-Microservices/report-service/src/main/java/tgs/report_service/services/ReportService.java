@@ -13,19 +13,15 @@ public class ReportService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private final String LOAN_URL = "http://loan-service/api/loans";
+    private final String LOAN_ACTIVE_URL = "http://loan-service/api/loans/active"; 
+    private final String LOAN_ALL_URL = "http://loan-service/api/loans";
     private final String CUSTOMER_URL = "http://customer-service/api/clients";
     
-    // CORRECCIÓN: Usar endpoint filtrado si existe, o manejar nulls seguramente
     public List<LoanDTO> getActiveLoans() {
-        // Idealmente: GET /api/loans/search?status=ACTIVE
-        // Por ahora, mantendremos la lógica pero con validación de nulos robusta
-        LoanDTO[] loans = restTemplate.getForObject(LOAN_URL, LoanDTO[].class);
+        // Ahora es mucho más rápido y ligero
+        LoanDTO[] loans = restTemplate.getForObject(LOAN_ACTIVE_URL, LoanDTO[].class);
         if (loans == null) return new ArrayList<>();
-        
-        return Arrays.stream(loans)
-                .filter(l -> "ACTIVE".equalsIgnoreCase(l.getStatus()))
-                .collect(Collectors.toList());
+        return Arrays.asList(loans);
     }
 
     public List<ClientDTO> getDelinquentClients() {
@@ -37,12 +33,11 @@ public class ReportService {
                 .collect(Collectors.toList());
     }
 
-    // 3. Ranking de Herramientas
     public List<Map<String, Object>> getToolRanking() {
-        LoanDTO[] loans = restTemplate.getForObject(LOAN_URL, LoanDTO[].class);
+        // Para ranking seguimos necesitando el histórico
+        LoanDTO[] loans = restTemplate.getForObject(LOAN_ALL_URL, LoanDTO[].class);
         if (loans == null) return new ArrayList<>();
 
-        // Agrupar por toolId y contar
         Map<Long, Long> frequencyMap = Arrays.stream(loans)
                 .collect(Collectors.groupingBy(LoanDTO::getToolId, Collectors.counting()));
 
@@ -55,9 +50,7 @@ public class ReportService {
             ranking.add(item);
         }
 
-        // Ordenar de mayor a menor
         ranking.sort((a, b) -> ((Long) b.get("loansCount")).compareTo((Long) a.get("loansCount")));
-        
         return ranking;
     }
 

@@ -20,13 +20,12 @@ return (
         <li className="nav-item">
             <Link className="nav-link" to="/tools">Herramientas</Link>
         </li>
-        {/* <li className="nav-item">
+        <li className="nav-item">
             <Link className="nav-link" to="/loans">Préstamos</Link>
         </li>
         <li className="nav-item">
             <Link className="nav-link" to="/clients">Clientes</Link>
         </li> 
-        */}
         <li className="nav-item">
             <Link className="nav-link" to="/login">Login</Link>
         </li>

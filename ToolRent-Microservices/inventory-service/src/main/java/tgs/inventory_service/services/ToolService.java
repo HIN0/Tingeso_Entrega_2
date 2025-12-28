@@ -23,7 +23,6 @@ public class ToolService {
     private RestTemplate restTemplate;
 
     public List<ToolEntity> getAllTools() { return toolRepository.findAll(); }
-
     public ToolEntity getToolById(Long id) { return toolRepository.findById(id).orElse(null); }
 
     @Transactional
@@ -39,8 +38,9 @@ public class ToolService {
         return saved;
     }
 
+    // MODIFICADO: Lógica skipKardex
     @Transactional
-    public ToolEntity updateStock(Long id, int quantity, String username) {
+    public ToolEntity updateStock(Long id, int quantity, String username, boolean skipKardex) {
         ToolEntity tool = getToolById(id);
         if (tool == null) throw new RuntimeException("Herramienta no encontrada");
 
@@ -49,7 +49,6 @@ public class ToolService {
 
         tool.setStock(newStock);
 
-        // Lógica automática de estados basada en stock
         if (newStock > 0 && tool.getStatus() != ToolStatus.REPAIRING && tool.getStatus() != ToolStatus.DECOMMISSIONED) {
             tool.setStatus(ToolStatus.AVAILABLE);
         } else if (newStock == 0 && quantity < 0) {
@@ -57,47 +56,39 @@ public class ToolService {
         }
 
         ToolEntity saved = toolRepository.save(tool);
-        String type = quantity > 0 ? "RETURN_STOCK" : "LOAN_OUT"; // Más descriptivo
-        reportKardex(type, saved.getId(), Math.abs(quantity), username);
+        
+        // Solo reporta si NO se pide saltar
+        if (!skipKardex) {
+            String type = quantity > 0 ? "RETURN_STOCK" : "LOAN_OUT";
+            reportKardex(type, saved.getId(), Math.abs(quantity), username);
+        }
 
         return saved;
     }
 
-    // NUEVO MÉTODO: Para manejar Daños y Bajas (RF1.2)
+    // Mantener changeStatus y reportKardex tal cual estaban...
     @Transactional
     public ToolEntity changeStatus(Long id, String newStatusStr, String username) {
+        // ... (código existente) ...
         ToolEntity tool = getToolById(id);
         if (tool == null) return null;
-
-        ToolStatus newStatus;
         try {
-            newStatus = ToolStatus.valueOf(newStatusStr); // Espera "REPAIRING", "DECOMMISSIONED", "AVAILABLE"
+            tool.setStatus(ToolStatus.valueOf(newStatusStr));
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Estado inválido: " + newStatusStr);
+            throw new RuntimeException("Estado inválido");
         }
-
-        tool.setStatus(newStatus);
         ToolEntity saved = toolRepository.save(tool);
-
-        // Registrar en Kardex el cambio de estado (ej. BAJA)
         reportKardex("STATUS_CHANGE_" + newStatusStr, saved.getId(), 0, username);
         return saved;
     }
-    
+
     private void reportKardex(String type, Long toolId, int quantity, String username) {
         try {
-            KardexDTO request = new KardexDTO();
-            request.setMovementType(type);
-            request.setToolId(toolId);
-            request.setQuantity(Math.abs(quantity)); // En Kardex solemos guardar cantidades positivas y el tipo indica la acción
-            request.setUsername(username);
-
-            // Usar POST con el objeto DTO directamente
-            restTemplate.postForObject("http://KARDEX-SERVICE/api/kardex", request, Void.class);
-            log.info("Envío a Kardex exitoso: {} unidades de herramienta {}", quantity, toolId);
+            KardexDTO request = new KardexDTO(type, toolId, Math.abs(quantity), username);
+            restTemplate.postForObject("http://kardex-service/api/kardex", request, Void.class);
+            log.info("Kardex reportado: {}", type);
         } catch (Exception e) {
-            // Esto te dirá exactamente si el error es de validación (400) o de red (500)
-            log.error("Fallo crítico en comunicación con Kardex. Causa: {}", e.getMessage());
+            log.error("Error Kardex: {}", e.getMessage());
         }
     }
-}                  
+}

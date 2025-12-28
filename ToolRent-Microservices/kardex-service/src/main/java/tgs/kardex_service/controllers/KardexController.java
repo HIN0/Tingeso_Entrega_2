@@ -1,6 +1,7 @@
 package tgs.kardex_service.controllers;
 
 import tgs.kardex_service.entities.KardexEntity;
+import tgs.kardex_service.models.KardexRequest; // Importa el nuevo DTO
 import tgs.kardex_service.services.KardexService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -27,16 +28,17 @@ public class KardexController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createEntry(@RequestBody KardexEntity entry) {
+    public ResponseEntity<?> createEntry(@RequestBody KardexRequest dto) { 
         try {
-            // RECTIFICACIÓN: Asegurar valores mínimos antes de guardar
-            if (entry.getDate() == null) {
-                entry.setDate(LocalDate.now());
-            }
-            // Evitar que JPA falle por campos nulos opcionales
-            if (entry.getStockAfter() == 0) {
-                entry.setStockAfter(0); 
-            }
+
+            KardexEntity entry = KardexEntity.builder()
+                    .movementType(dto.getMovementType())
+                    .toolId(dto.getToolId())
+                    .quantity(dto.getQuantity())
+                    .username(dto.getUsername())
+                    .date(LocalDate.now())
+                    .stockAfter(0)         
+                    .build();
             
             KardexEntity saved = kardexService.saveEntry(entry);
             return ResponseEntity.ok(saved);
