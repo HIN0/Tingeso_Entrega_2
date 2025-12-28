@@ -1,31 +1,26 @@
 import httpClient from "../http-common";
 
-const login = (data) => {
-    return httpClient.post("/auth/login", data);
-}
+const login = (username, password) => {
+return httpClient.post("/auth/login", { username, password })
+    .then(response => {
+    if (response.data.token) {
+        // Guardamos el usuario y token en el navegador
+        localStorage.setItem("user", JSON.stringify(response.data));
+    }
+    return response.data;
+    });
+};
 
-const register = (data) => {
-    return httpClient.post("/auth/register", data);
-}
-
-const validate = (token) => {
-    return httpClient.get(`/auth/validate?token=${token}`);
-}
-
-// Método auxiliar para guardar el token en el navegador
-const setToken = (token) => {
-    localStorage.setItem("token", token);
-}
-
-// Método auxiliar para obtener el token
-const getToken = () => {
-    return localStorage.getItem("token");
-}
-
-// Método para cerrar sesión
 const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-}
+localStorage.removeItem("user");
+};
 
-export default { login, register, validate, setToken, getToken, logout };
+const getCurrentUser = () => {
+return JSON.parse(localStorage.getItem("user"));
+};
+
+export default {
+login,
+logout,
+getCurrentUser
+};
