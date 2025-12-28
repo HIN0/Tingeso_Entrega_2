@@ -16,7 +16,7 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        String secretStr = "secret_key_super_segura_para_tingeso_evaluacion_2025_tgs";
+        String secretStr = "UnaClaveMuySecretaYLoSuficientementeLargaParaToolRent2025";
         secret = Keys.hmacShaKeyFor(secretStr.getBytes(StandardCharsets.UTF_8));
     }
 
