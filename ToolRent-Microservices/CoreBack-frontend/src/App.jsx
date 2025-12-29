@@ -6,6 +6,7 @@ import CreateLoan from "./components/CreateLoan";
 import ActiveLoans from "./components/ActiveLoans"; 
 import AddTool from "./components/AddTool";
 import ClientList from "./components/ClientList";
+import AddClient from "./components/AddClient";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -27,6 +28,7 @@ function App() {
             <Route path="/loans/add" element={<CreateLoan />} />
 
             <Route path="/clients" element={<ClientList />} />
+            <Route path="/clients/add" element={<AddClient />} />
           </Routes>
         </div>
       </div>

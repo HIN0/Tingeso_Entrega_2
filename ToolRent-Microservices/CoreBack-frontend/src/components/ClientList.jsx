@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import ClientService from "../services/client.service";
 import LoanService from "../services/loan.service";
-import { Link } from "react-router-dom";
+import { data, Link } from "react-router-dom";
 
 const ClientList = () => {
   const [clients, setClients] = useState([]);
@@ -11,7 +11,7 @@ const ClientList = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [showModal, setShowModal] = useState(false);
   
-  // NUEVO: Estado para mensajes en pantalla (no alerts)
+  // Estado para mensajes en pantalla 
   const [notification, setNotification] = useState({ message: "", type: "" });
 
   useEffect(() => {
@@ -21,20 +21,19 @@ const ClientList = () => {
 const loadData = () => {
     ClientService.getAll()
       .then(res => {
-          // Protección: Si no hay clientes, asegurar array vacío
-          setClients(Array.isArray(res.data) ? res.data : []);
+        const data = Array.isArray(res.data) ? res.data : [];
+        data.sort((a, b) => a.id - b.id); 
+        setClients(data);
       })
       .catch(e => console.error(e));
 
     LoanService.getAll()
-      .then(res => {
-          // CORRECCIÓN PRINCIPAL:
-          // Si el backend devuelve 204, res.data no es un array. Lo forzamos a [].
+      .then(res => {      
           setLoans(Array.isArray(res.data) ? res.data : []); 
       })
       .catch(e => {
           console.error("Error cargando préstamos:", e);
-          setLoans([]); // En caso de error, asegurar array para que no rompa la UI
+          setLoans([]);
       });
   };
 
@@ -48,7 +47,6 @@ const loadData = () => {
   };
 
   // --- LÓGICA DE ACCIONES MODIFICADA ---
-
   const handleActionClick = (client) => {
     if (client.status === "ACTIVE") {
         // Restricción Directa (Reemplazamos window.confirm por una acción directa con mensaje)
@@ -103,16 +101,18 @@ const loadData = () => {
     : [];
     
   return (
-    <div className="container mt-4">
-      {/* HEADER */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-          <h2>Gestión de Clientes</h2>
-          <Link to="/clients/add" className="btn btn-primary">
-                + Registrar Nuevo Cliente
-          </Link>
-      </div>
+      <div className="container mt-4">
+        {/* HEADER */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+            <h2>Gestión de Clientes</h2>
+            
+            {/* --- BOTÓN AÑADIR NUEVO CLIENTE --- */}
+            <Link to="/clients/add" className="btn btn-success">
+                  + Añadir Nuevo Cliente
+            </Link>
+        </div>
 
-      {/* NUEVO: BARRA DE NOTIFICACIÓN INTEGRADA */}
+      {/* BARRA DE NOTIFICACIÓN INTEGRADA */}
       {notification.message && (
           <div className={`alert alert-${notification.type} role="alert"`}>
               {notification.message}
@@ -123,6 +123,7 @@ const loadData = () => {
       <table className="table table-bordered table-hover shadow-sm">
         <thead className="table-dark">
           <tr>
+            <th>ID</th>
             <th>RUT</th>
             <th>Nombre Completo</th>
             <th>Email</th>
@@ -135,6 +136,7 @@ const loadData = () => {
         <tbody>
           {clients.map(client => (
             <tr key={client.id} className={client.status === 'RESTRICTED' ? 'table-danger' : ''}>
+              <td>{client.id}</td>
               <td>{client.rut}</td>
               <td>{client.name} {client.lastName}</td>
               <td>{client.email}</td>
@@ -160,7 +162,7 @@ const loadData = () => {
         </tbody>
       </table>
 
-      {/* MODAL (Sin cambios mayores, solo lógica de cierre) */}
+      {/* MODAL */}
       {showModal && selectedClient && (
         <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
             <div className="modal-dialog modal-lg">
