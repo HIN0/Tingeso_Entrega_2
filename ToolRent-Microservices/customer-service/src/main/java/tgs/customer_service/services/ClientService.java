@@ -4,6 +4,7 @@ import tgs.customer_service.entities.ClientEntity;
 import tgs.customer_service.repositories.ClientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -56,5 +57,40 @@ public class ClientService {
             return clientRepository.save(client);
         }
         return null;
+    }
+
+    @Transactional
+    public ClientEntity payDebt(Long id, Double amount) {
+        ClientEntity client = getClientById(id);
+        if (client == null) return null;
+
+        double currentBalance = (client.getBalance() == null) ? 0 : client.getBalance();
+        double newBalance = currentBalance - amount;
+        
+        // Evitar balances negativos
+        if (newBalance < 0) newBalance = 0;
+        
+        client.setBalance(newBalance);
+
+        // Regla de Negocio: Si paga todo, se ACTIVA automáticamente
+        if (newBalance == 0) {
+            client.setStatus("ACTIVE");
+        }
+        
+        return clientRepository.save(client);
+    }
+
+    @Transactional
+    public ClientEntity changeStatus(Long id, String newStatus) {
+        ClientEntity client = getClientById(id);
+        if (client == null) return null;
+        
+        // Regla: No se puede activar manualmente si tiene deuda
+        if ("ACTIVE".equalsIgnoreCase(newStatus) && client.getBalance() > 0) {
+            throw new RuntimeException("No se puede activar un cliente con deuda pendiente. Debe pagar primero.");
+        }
+
+        client.setStatus(newStatus);
+        return clientRepository.save(client);
     }
 }
