@@ -38,7 +38,6 @@ public class ToolService {
         return saved;
     }
 
-    // MODIFICADO: Lógica skipKardex
     @Transactional
     public ToolEntity updateStock(Long id, int quantity, String username, boolean skipKardex) {
         ToolEntity tool = getToolById(id);
@@ -66,10 +65,8 @@ public class ToolService {
         return saved;
     }
 
-    // Mantener changeStatus y reportKardex tal cual estaban...
     @Transactional
     public ToolEntity changeStatus(Long id, String newStatusStr, String username) {
-        // ... (código existente) ...
         ToolEntity tool = getToolById(id);
         if (tool == null) return null;
         try {
@@ -90,5 +87,16 @@ public class ToolService {
         } catch (Exception e) {
             log.error("Error Kardex: {}", e.getMessage());
         }
+    }
+
+    public ToolEntity incrementInRepair(Long id) {
+        ToolEntity tool = getToolById(id);
+        if (tool == null) return null;
+
+        // Incrementamos el contador
+        int currentInRepair = (tool.getInRepair() == null) ? 0 : tool.getInRepair();
+        tool.setInRepair(currentInRepair + 1);
+
+        return toolRepository.save(tool);
     }
 }

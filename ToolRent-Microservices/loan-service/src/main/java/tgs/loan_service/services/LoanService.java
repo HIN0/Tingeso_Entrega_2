@@ -65,7 +65,7 @@ public class LoanService {
             throw new RuntimeException("La fecha de devolución no puede ser anterior a hoy.");
         }
 
-        // 2. Descontar Stock (Con skipKardex=true para que Inventory NO reporte, reportamos nosotros)
+        // 2. Descontar Stock
         try {
             restTemplate.put(INVENTORY_URL + "/" + toolId + "/stock?quantity=-1&username=" + username + "&skipKardex=true", null);
         } catch (Exception e) {
@@ -85,7 +85,7 @@ public class LoanService {
             LoanEntity saved = loanRepository.save(newLoan);
             
             // Registramos el Kardex (Si falla, el préstamo ya se guardó, pero veremos el error en logs)
-            registerKardex(toolId, "PRESTAMO", 1, username);
+            registerKardex(toolId, "LOANED", 1, username);
             return saved;
             
         } catch (Exception e) {
@@ -117,37 +117,44 @@ public class LoanService {
 
         double totalToPay = (daysRented * tariff.getDailyRentFee()) + (daysOverdue * tariff.getDailyLateFee());
 
+        String kardexMovementType = "RETURNED";
+
         // 2. Lógica de Daños
         if ("DAMAGED".equalsIgnoreCase(condition)) {
+            // CASO REPARACIÓN:
             totalToPay += tariff.getRepairFee();
-            // Inventory cambia estado -> Genera registro Kardex propio (STATUS_CHANGE)
-            restTemplate.put(INVENTORY_URL + "/" + loan.getToolId() + "/status?newStatus=REPAIRING&username=" + username, null);
+            
+            // 2b. NO Devolver stock físico sino a InRepair (skipKardex=true)
+            restTemplate.put(INVENTORY_URL + "/" + loan.getToolId() + "/repair?username=" + username, null);
+            
+            // 2c. Nombre para el Kardex
+            kardexMovementType = "REPAIRING";
         } 
         else if ("DESTROYED".equalsIgnoreCase(condition)) {
+            // CASO IRREPARABLE:
+            // 2a. Cobrar reposición (Igual que antes)
             ToolDTO tool = restTemplate.getForObject(INVENTORY_URL + "/" + loan.getToolId(), ToolDTO.class);
-            if (tool != null && tool.getReplacementValue() != null) {
-                totalToPay += tool.getReplacementValue(); 
-            } else {
-                totalToPay += 100000; 
-            }
-            // Inventory cambia estado -> Genera registro Kardex propio (STATUS_CHANGE)
-            restTemplate.put(INVENTORY_URL + "/" + loan.getToolId() + "/status?newStatus=DECOMMISSIONED&username=" + username, null);
+            totalToPay += (tool != null && tool.getReplacementValue() != null) ? tool.getReplacementValue() : 10000;
+
+            // 2b. Nombre para el Kardex
+            kardexMovementType = "DECOMMISSIONED";
         }
         else {
-            // "GOOD": Devolver stock normal
-            // CORRECCIÓN: Agregar &skipKardex=true para evitar duplicado con Inventory
+            // CASO BUENO
+            // Devolver stock normal
             restTemplate.put(INVENTORY_URL + "/" + loan.getToolId() + "/stock?quantity=1&username=" + username + "&skipKardex=true", null);
+            kardexMovementType = "RETURNED";
         }
 
-        // 3. Registrar Deuda
+        // 3. Registrar Deuda y Guardar
         if (totalToPay > 0) {
             restTemplate.put(CUSTOMER_URL + "/" + loan.getClientId() + "/balance?amount=" + totalToPay, null);
         }
 
         loan.setStatus("RETURNED");
         
-        // Registrar devolución comercial en Kardex
-        registerKardex(loan.getToolId(), "DEVOLUCION_" + condition, 1, username);
+        // Registrar en Kardex con el nombre calculado
+        registerKardex(loan.getToolId(), kardexMovementType, 1, username);
         
         return loanRepository.save(loan);
     }

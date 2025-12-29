@@ -32,23 +32,24 @@ public class ToolController {
     }
     
     @PutMapping("/{id}/stock")
-    public ResponseEntity<ToolEntity> updateStock(@PathVariable Long id, 
-                                                  @RequestParam int quantity,
-                                                  @RequestParam(defaultValue = "false") boolean skipKardex,
-                                                  @RequestHeader(value = "X-User-Name", defaultValue = "admin") String username) {
+    public ResponseEntity<ToolEntity> updateStock
+                (@PathVariable Long id, 
+                @RequestParam int quantity,
+                @RequestParam(defaultValue = "false") boolean skipKardex,
+                @RequestHeader(value = "X-User-Name", defaultValue = "admin") String username) {
         return ResponseEntity.ok(toolService.updateStock(id, quantity, username, skipKardex));
     }
 
-    @PutMapping("/{id}/status")
-    public ResponseEntity<ToolEntity> updateStatus(
-            @PathVariable Long id, 
-            @RequestParam String newStatus,
-            @RequestHeader(value = "X-User-Name", defaultValue = "admin") String username) {
-        
-        ToolEntity updatedTool = toolService.changeStatus(id, newStatus, username);
-        if (updatedTool == null) {
-            return ResponseEntity.notFound().build();
+    @PutMapping("/{id}/repair")
+        public ResponseEntity<ToolEntity> markForRepair(
+                @PathVariable Long id, 
+                @RequestHeader(value = "X-User-Name", defaultValue = "admin") String username) {
+            
+            ToolEntity updatedTool = toolService.incrementInRepair(id);
+            if (updatedTool == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(updatedTool);
         }
-        return ResponseEntity.ok(updatedTool);
-    }
+
 }
