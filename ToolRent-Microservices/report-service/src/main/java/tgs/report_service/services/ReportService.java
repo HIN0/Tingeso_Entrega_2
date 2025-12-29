@@ -29,7 +29,7 @@ public class ReportService {
         if (clients == null) return new ArrayList<>();
 
         return Arrays.stream(clients)
-                .filter(c -> "RESTRICTED".equalsIgnoreCase(c.getStatus()) || (c.getBalance() != null && c.getBalance() > 0))
+                .filter(c -> "RESTRICTED".equalsIgnoreCase(c.getStatus()) && (c.getBalance() != null && c.getBalance() > 0))
                 .collect(Collectors.toList());
     }
 

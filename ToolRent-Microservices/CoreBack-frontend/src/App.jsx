@@ -8,6 +8,7 @@ import AddTool from "./components/AddTool";
 import ClientList from "./components/ClientList";
 import AddClient from "./components/AddClient";
 import TariffManager from "./components/TariffManager";
+import ReportViewer from "./components/ReportViewer";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -31,6 +32,8 @@ function App() {
             <Route path="/clients/add" element={<AddClient />} />
 
             <Route path="/tariffs" element={<TariffManager />} />
+
+            <Route path="/reports" element={<ReportViewer />} />
           </Routes>
         </div>
       </div>
