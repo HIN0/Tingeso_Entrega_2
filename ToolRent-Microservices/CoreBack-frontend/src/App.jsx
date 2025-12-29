@@ -7,6 +7,7 @@ import ActiveLoans from "./components/ActiveLoans";
 import AddTool from "./components/AddTool";
 import ClientList from "./components/ClientList";
 import AddClient from "./components/AddClient";
+import TariffManager from "./components/TariffManager";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -23,12 +24,13 @@ function App() {
             <Route path="/tools" element={<ToolList />} />
             <Route path="/tools/add" element={<AddTool />} />
 
-            {/* Nuevas Rutas */}
             <Route path="/loans" element={<ActiveLoans />} />
             <Route path="/loans/add" element={<CreateLoan />} />
 
             <Route path="/clients" element={<ClientList />} />
             <Route path="/clients/add" element={<AddClient />} />
+
+            <Route path="/tariffs" element={<TariffManager />} />
           </Routes>
         </div>
       </div>
