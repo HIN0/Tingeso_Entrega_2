@@ -39,6 +39,18 @@ public class ToolService {
     }
 
     @Transactional
+        public ToolEntity updateTool(Long id, ToolEntity updatedData) {
+            ToolEntity existing = getToolById(id);
+            if (existing == null) return null;
+
+            existing.setName(updatedData.getName());
+            existing.setCategory(updatedData.getCategory());
+            existing.setReplacementValue(updatedData.getReplacementValue());
+            
+            return toolRepository.save(existing);
+        }
+
+    @Transactional
     public ToolEntity updateStock(Long id, int quantity, String username, boolean skipKardex) {
         ToolEntity tool = getToolById(id);
         if (tool == null) throw new RuntimeException("Herramienta no encontrada");
@@ -66,18 +78,35 @@ public class ToolService {
     }
 
     @Transactional
-    public ToolEntity changeStatus(Long id, String newStatusStr, String username) {
-        ToolEntity tool = getToolById(id);
-        if (tool == null) return null;
-        try {
-            tool.setStatus(ToolStatus.valueOf(newStatusStr));
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Estado inválido");
+        public ToolEntity changeStatus(Long id, String newStatusStr, String username) {
+            ToolEntity tool = getToolById(id);
+            if (tool == null) return null;
+
+            ToolStatus newStatus;
+            try {
+                newStatus = ToolStatus.valueOf(newStatusStr);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Estado inválido");
+            }
+
+            tool.setStatus(newStatus);
+            
+            // Lógica de Kardex y Limpieza
+            String kardexType = newStatusStr;
+
+            // LÓGICA ESPECÍFICA PEDIDA: DECOMMISSIONED
+            if (newStatus == ToolStatus.DECOMMISSIONED) {
+                tool.setStock(0);
+                tool.setInRepair(0);
+                kardexType = "DECOMMISSIONED";
+            }
+
+            ToolEntity saved = toolRepository.save(tool);
+            
+            // Reportar al Kardex y guardar
+            reportKardex(kardexType, saved.getId(), 0, username);
+            return saved;
         }
-        ToolEntity saved = toolRepository.save(tool);
-        reportKardex("STATUS_CHANGE_" + newStatusStr, saved.getId(), 0, username);
-        return saved;
-    }
 
     private void reportKardex(String type, Long toolId, int quantity, String username) {
         try {

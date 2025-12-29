@@ -5,8 +5,11 @@ import { Link } from "react-router-dom";
 const ToolList = () => {
   const [tools, setTools] = useState([]);
   const [error, setError] = useState(false);
+  
+  // Estados para el Modal de Edición
+  const [editingTool, setEditingTool] = useState(null);
+  const [editValue, setEditValue] = useState(0);
 
-  // Al cargar el componente, pedimos las herramientas
   useEffect(() => {
     retrieveTools();
   }, []);
@@ -15,7 +18,6 @@ const ToolList = () => {
     ToolService.getAll()
       .then((response) => {
         setTools(response.data);
-        console.log("Herramientas cargadas:", response.data);
       })
       .catch((e) => {
         console.error("Error al cargar herramientas:", e);
@@ -23,37 +25,68 @@ const ToolList = () => {
       });
   };
 
-  // --- LÓGICA DE FILTRADO Y ORDENAMIENTO ---
+  // --- Lógica Dar de Baja ---
+  const handleDecommission = (id) => {
+    const confirm = window.confirm("¿Está seguro de DAR DE BAJA esta herramienta? Stock y Reparación pasarán a 0.");
+    if (confirm) {
+        ToolService.updateStatus(id, "DECOMMISSIONED")
+            .then(() => {
+                alert("Herramienta dada de baja correctamente.");
+                retrieveTools(); // Recargar tablas
+            })
+            .catch(e => {
+                console.error(e);
+                alert("Error al dar de baja.");
+            });
+    }
+  };
 
-  // 1. Tabla Principal: AVAILABLE y REPAIRING (u otros estados activos)
+  // --- Lógica Edición (Valor Reposición) ---
+  const openEditModal = (tool) => {
+    setEditingTool(tool);
+    setEditValue(tool.replacementValue);
+  };
+
+  const saveEdit = () => {
+    if (!editingTool) return;
+
+    // Creamos el objeto actualizado manteniendo los otros datos
+    const updatedTool = { ...editingTool, replacementValue: editValue };
+
+    ToolService.update(editingTool.id, updatedTool)
+        .then(() => {
+            setEditingTool(null); // Cerrar modal
+            retrieveTools(); // Recargar tabla
+        })
+        .catch(e => {
+            console.error(e);
+            alert("Error al actualizar valor.");
+        });
+  };
+
+  // Filtros
   const activeTools = tools
     .filter(t => t.status === "AVAILABLE" || t.status === "REPAIRING" || t.status === "LOANED")
-    .sort((a, b) => a.id - b.id); // Ordenar por ID
+    .sort((a, b) => a.id - b.id);
 
-  // 2. Tabla Secundaria: DECOMMISSIONED
   const decommissionedTools = tools
     .filter(t => t.status === "DECOMMISSIONED")
-    .sort((a, b) => a.id - b.id); // Ordenar por ID
+    .sort((a, b) => a.id - b.id);
 
   return (
-    <div className="list row">
+    <div className="list row container">
       <div className="col-md-12">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h2>Inventario de Herramientas</h2>
-                  {/* BOTÓN NUEVO AQUÍ */}
-                  <Link to="/tools/add" className="btn btn-success">
-                      + Añadir Nueva Herramienta
-                  </Link>
-              </div>
-              
-        {error && (
-          <div className="alert alert-danger mb-4">
-            Error al conectar con el servicio de Inventario. Verifica que el microservicio esté activo.
-          </div>
-        )}
+        <div className="d-flex justify-content-between align-items-center mb-4 mt-4">
+            <h2>Inventario de Herramientas</h2>
+            <Link to="/tools/add" className="btn btn-success">
+                + Añadir Nueva Herramienta
+            </Link>
+        </div>
 
-        {/* --- TABLA 1: HERRAMIENTAS ACTIVAS --- */}
-        <h3 className="mb-3 text-primary">Inventario Activo (Disponibles y En Reparación)</h3>
+        {error && <div className="alert alert-danger">Error de conexión con Inventario.</div>}
+
+        {/* TABLA ACTIVA */}
+        <h3 className="mb-3 text-primary">Inventario Activo</h3>
         <table className="table table-striped table-bordered shadow-sm mb-5">
           <thead className="table-dark">
             <tr>
@@ -64,6 +97,8 @@ const ToolList = () => {
               <th>Stock</th>
               <th>En Reparación</th>
               <th>Valor Reposición</th>
+              <th>Acciones</th>
+              <th>Dar de Baja</th> 
             </tr>
           </thead>
           <tbody>
@@ -74,28 +109,39 @@ const ToolList = () => {
                   <td>{tool.name}</td>
                   <td>{tool.category}</td>
                   <td>
-                    <span className={`badge ${
-                      tool.status === 'AVAILABLE' ? 'bg-success' : 
-                      tool.status === 'REPAIRING' ? 'bg-warning text-dark' : 
-                      'bg-info'
-                    }`}>
+                    <span className={`badge ${tool.status === 'AVAILABLE' ? 'bg-success' : 'bg-warning text-dark'}`}>
                       {tool.status}
                     </span>
                   </td>
                   <td>{tool.stock}</td>
                   <td>{tool.inRepair}</td>
                   <td>${tool.replacementValue}</td>
+                  
+                  {/* Botón EDITAR */}
+                  <td>
+                    <button className="btn btn-outline-primary btn-sm" onClick={() => openEditModal(tool)}>
+                        Edit
+                    </button>
+                  </td>
+
+                  {/* Botón DECOMMISSIONAR */}
+                  <td>
+                    <button 
+                        className="btn btn-danger btn-sm fw-bold" 
+                        onClick={() => handleDecommission(tool.id)}
+                    >
+                        DECOMMISSIONAR
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
-              <tr>
-                <td colSpan="7" className="text-center">No hay herramientas activas</td>
-              </tr>
+              <tr><td colSpan="9" className="text-center">No hay herramientas activas</td></tr>
             )}
           </tbody>
         </table>
 
-        {/* --- TABLA 2: HERRAMIENTAS DADAS DE BAJA --- */}
+        {/* TABLA BAJAS */}
         <h3 className="mb-3 text-danger">Historial de Bajas (Decommissioned)</h3>
         <table className="table table-striped table-bordered shadow-sm">
           <thead className="table-secondary">
@@ -123,6 +169,35 @@ const ToolList = () => {
             )}
           </tbody>
         </table>
+
+        {/* MODAL SIMPLE DE EDICIÓN (Overlay) */}
+        {editingTool && (
+            <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">Editar {editingTool.name}</h5>
+                            <button className="btn-close" onClick={() => setEditingTool(null)}></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Nuevo Valor de Reposición ($)</label>
+                                <input 
+                                    type="number" 
+                                    className="form-control" 
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={() => setEditingTool(null)}>Cancelar</button>
+                            <button className="btn btn-primary" onClick={saveEdit}>Guardar Cambios</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
       </div>
     </div>

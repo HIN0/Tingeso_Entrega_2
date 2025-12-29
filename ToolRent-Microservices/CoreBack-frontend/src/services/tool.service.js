@@ -20,7 +20,12 @@ const remove = (id) => {
 return httpClient.delete(`/api/tools/${id}`);
 };
 
-// Endpoint específico para sumar/restar stock (si lo tienes implementado)
+// Para actualizar el estado de la herramienta (AVAILABLE, IN_REPAIR, DECOMMISSIONED)
+const updateStatus = (id, newStatus) => {
+    return httpClient.put(`/api/tools/${id}/status`, null, { params: { newStatus } });
+};
+
+// Para sumar/restar stock
 const updateStock = (id, quantity) => {
 return httpClient.put(`/api/tools/${id}/stock`, null, { params: { quantity } });
 };
@@ -31,5 +36,6 @@ get,
 create,
 update,
 remove,
-updateStock
+updateStock,
+updateStatus
 };
