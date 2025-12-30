@@ -91,6 +91,10 @@ public class ToolService {
 
             tool.setStatus(newStatus);
             
+            // Guardar valores actuales antes de cambios específicos para Kardex
+            int currentStock = tool.getStock() == null ? 0 : tool.getStock();
+            int currentInRepair = tool.getInRepair() == null ? 0 : tool.getInRepair();
+
             // Lógica de Kardex y Limpieza
             String kardexType = newStatusStr;
 
@@ -104,7 +108,7 @@ public class ToolService {
             ToolEntity saved = toolRepository.save(tool);
             
             // Reportar al Kardex y guardar
-            reportKardex(kardexType, saved.getId(), 0, username);
+            reportKardex(kardexType, saved.getId(), currentStock + currentInRepair, username);
             return saved;
         }
 

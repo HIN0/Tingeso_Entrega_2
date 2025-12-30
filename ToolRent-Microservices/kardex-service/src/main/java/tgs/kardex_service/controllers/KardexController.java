@@ -4,6 +4,7 @@ import tgs.kardex_service.entities.KardexEntity;
 import tgs.kardex_service.models.KardexRequest; // Importa el nuevo DTO
 import tgs.kardex_service.services.KardexService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,11 +17,6 @@ public class KardexController {
 
     @Autowired
     private KardexService kardexService;
-
-    @GetMapping
-    public ResponseEntity<List<KardexEntity>> getAll() {
-        return ResponseEntity.ok(kardexService.getAll());
-    }
 
     @GetMapping("/tool/{toolId}")
     public ResponseEntity<List<KardexEntity>> getByTool(@PathVariable Long toolId) {
@@ -45,5 +41,18 @@ public class KardexController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al procesar JSON: " + e.getMessage());
         }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<KardexEntity>> getKardex(
+            @RequestParam(required = false) Long toolId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        List<KardexEntity> movements = kardexService.getKardex(toolId, startDate, endDate);
+        if (movements.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(movements);
     }
 }

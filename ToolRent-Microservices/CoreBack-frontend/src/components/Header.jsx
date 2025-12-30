@@ -30,6 +30,9 @@ return (
             <Link className="nav-link" to="/tariffs">Tarifas</Link> 
         </li>
         <li className="nav-item">
+        <Link className="nav-link" to="/kardex">Kardex</Link>
+        </li>
+        <li className="nav-item">
             <Link className="nav-link fw-bold" to="/reports">Reportes 📊</Link> 
         </li>
         <li className="nav-item">

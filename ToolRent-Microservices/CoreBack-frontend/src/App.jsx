@@ -9,6 +9,7 @@ import ClientList from "./components/ClientList";
 import AddClient from "./components/AddClient";
 import TariffManager from "./components/TariffManager";
 import ReportViewer from "./components/ReportViewer";
+import KardexList from "./components/KardexList";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -34,6 +35,8 @@ function App() {
             <Route path="/tariffs" element={<TariffManager />} />
 
             <Route path="/reports" element={<ReportViewer />} />
+
+            <Route path="/kardex" element={<KardexList />} />
           </Routes>
         </div>
       </div>
