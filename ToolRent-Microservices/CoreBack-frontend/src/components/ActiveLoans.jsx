@@ -16,7 +16,7 @@ const ActiveLoans = () => {
     }, []);
 
     const loadLoans = () => {
-        LoanService.getActive()
+        LoanService.getAll()
             .then(res => setLoans(res.data))
             .catch(e => console.error(e));
     };
@@ -44,17 +44,18 @@ const ActiveLoans = () => {
 
     return (
         <div className="container mt-4">
-            <h2>Préstamos Activos</h2>
+            <h2>Registro Préstamos</h2>
             <Link to="/loans/add" className="btn btn-primary mb-3">Nuevo Préstamo</Link>
 
             <table className="table table-bordered table-striped">
                 <thead className="table-dark">
                     <tr>
                         <th>ID</th>
-                        <th>Fecha Préstamo</th>
-                        <th>Vence</th>
+                        <th>Fecha Inicio Préstamo</th>
+                        <th>Fecha Vencimiento Préstamo</th>
                         <th>Cliente</th>
                         <th>Herramienta</th>
+                        <th>Status</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
@@ -65,8 +66,9 @@ const ActiveLoans = () => {
                             <td>{loan.loanDate}</td>
                             <td>{loan.deadlineDate}</td>
                             {/* Nota: Si el backend no devuelve nombres en /active, solo verás IDs */}
-                            <td>{loan.clientId}</td> 
-                            <td>{loan.toolId}</td>
+                            <td>(ID: {loan.clientId}) {loan.clientName}</td> 
+                            <td>(ID: {loan.toolId}) { loan.toolName}</td>
+                            <td>{loan.status}</td>
                             <td>
                                 <button 
                                     className="btn btn-warning btn-sm"

@@ -3,11 +3,20 @@ import ReportService from "../services/report.service";
 
 const ReportViewer = () => {
     const [summary, setSummary] = useState({ activeLoansCount: 0, delinquentClientsCount: 0 });
+    
+    // activeLoans tendrá TODOS los datos originales traídos del backend
     const [activeLoans, setActiveLoans] = useState([]);
+    // filteredLoans es lo que realmente se dibuja en la tabla (lo que cambia con el filtro)
+    const [filteredLoans, setFilteredLoans] = useState([]);
+    
     const [delinquents, setDelinquents] = useState([]);
     const [ranking, setRanking] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("activeLoans"); // 'activeLoans', 'delinquents', 'ranking'
+    const [activeTab, setActiveTab] = useState("activeLoans");
+
+    // Estados para el filtro de fechas
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     useEffect(() => {
         loadReports();
@@ -16,16 +25,20 @@ const ReportViewer = () => {
     const loadReports = async () => {
         try {
             setLoading(true);
-            // Ejecutamos todas las peticiones en paralelo para velocidad
             const [resSummary, resActive, resDelinquent, resRanking] = await Promise.all([
                 ReportService.getSummary(),
-                ReportService.getActiveLoans(),
+                ReportService.getActiveLoans(), // Asumimos que esto trae tanto ACTIVE como LATE
                 ReportService.getDelinquentClients(),
                 ReportService.getToolRanking()
             ]);
 
             setSummary(resSummary.data);
-            setActiveLoans(resActive.data);
+            
+            // Guardamos la data en AMBOS estados al inicio
+            const loansData = resActive.data || [];
+            setActiveLoans(loansData);
+            setFilteredLoans(loansData); 
+
             setDelinquents(resDelinquent.data);
             setRanking(resRanking.data);
         } catch (error) {
@@ -35,7 +48,50 @@ const ReportViewer = () => {
         }
     };
 
+    // --- LÓGICA DE FILTRO (FRONTEND) ---
+    const handleFilter = (e) => {
+        e.preventDefault();
 
+        // Si no hay fechas, mostramos todo
+        if (!startDate && !endDate) {
+            setFilteredLoans(activeLoans);
+            return;
+        }
+
+        const result = activeLoans.filter((loan) => {
+            // Asegúrate que tu objeto loan tenga 'loanDate' o 'startDate'. 
+            // Ajusta 'loan.loanDate' al nombre real que viene de tu DB.
+            const loanDate = new Date(loan.loanDate); 
+            const start = startDate ? new Date(startDate) : null;
+            const end = endDate ? new Date(endDate) : null;
+
+            if (start && loanDate < start) return false;
+            if (end && loanDate > end) return false;
+            
+            return true;
+        });
+
+        setFilteredLoans(result);
+    };
+
+    const clearFilter = () => {
+        setStartDate("");
+        setEndDate("");
+        setFilteredLoans(activeLoans);
+    };
+
+    // Función para pintar la etiqueta de estado según vencimiento
+    const getStatusBadge = (loan) => {
+        // Si el backend ya trae el status, úsalo. Si no, calcúlalo por fecha.
+        const deadline = new Date(loan.deadlineDate);
+        const today = new Date();
+        
+        // Lógica: Si ya pasó la fecha y no está devuelto, es Atrasado (LATE)
+        if (deadline < today) {
+            return <span className="badge bg-danger">ATRASADO</span>;
+        }
+        return <span className="badge bg-success">ACTIVO</span>;
+    };
 
     if (loading) {
         return <div className="container mt-5 text-center"><h3>Cargando Reportes...</h3></div>;
@@ -100,36 +156,73 @@ const ReportViewer = () => {
             {/* CONTENIDO DE TABLAS */}
             <div className="card shadow p-3">
                 
-                {/* TABLA 1: PRÉSTAMOS ACTIVOS */}
+                {/* TABLA 1: PRÉSTAMOS (ACTIVOS + ATRASADOS) */}
                 {activeTab === 'activeLoans' && (
                     <>
-                        <h4 className="mb-3 text-primary">Detalle de Préstamos Activos</h4>
+                        <h4 className="mb-3 text-primary">Detalle de Préstamos</h4>
+                        
+                        {/* --- FORMULARIO DE FILTROS --- */}
+                        <form onSubmit={handleFilter} className="row g-2 mb-3 align-items-end p-2 bg-light border rounded">
+                            <div className="col-md-4">
+                                <label className="form-label small fw-bold">Desde</label>
+                                <input 
+                                    type="date" 
+                                    className="form-control form-control-sm" 
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                />
+                            </div>
+                            <div className="col-md-4">
+                                <label className="form-label small fw-bold">Hasta</label>
+                                <input 
+                                    type="date" 
+                                    className="form-control form-control-sm" 
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                />
+                            </div>
+                            <div className="col-md-2">
+                                <button type="submit" className="btn btn-primary btn-sm w-100">Filtrar</button>
+                            </div>
+                            <div className="col-md-2">
+                                <button type="button" onClick={clearFilter} className="btn btn-secondary btn-sm w-100">Limpiar</button>
+                            </div>
+                        </form>
+
                         <table className="table table-striped table-hover">
                             <thead className="table-light">
                                 <tr>
-                                    <th>ID Préstamo</th>
+                                    <th>ID</th>
                                     <th>Cliente ID</th>
                                     <th>Herramienta ID</th>
+                                    <th>Estado</th>
                                     <th>Fecha Inicio</th>
                                     <th>Vencimiento</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {activeLoans.length > 0 ? (
-                                    activeLoans.map(loan => (
+                                {/* Usamos filteredLoans aquí en lugar de activeLoans */}
+                                {filteredLoans.length > 0 ? (
+                                    filteredLoans.map(loan => (
                                         <tr key={loan.id}>
                                             <td>{loan.id}</td>
                                             <td>{loan.clientId}</td>
                                             <td>{loan.toolId}</td>
+                                            <td>
+                                                {getStatusBadge(loan)}
+                                            </td>
                                             <td>{loan.loanDate}</td>
                                             <td>{loan.deadlineDate}</td>
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan="5" className="text-center">No hay préstamos activos.</td></tr>
+                                    <tr><td colSpan="6" className="text-center text-muted">No se encontraron préstamos en este rango.</td></tr>
                                 )}
                             </tbody>
                         </table>
+                        <div className="text-end text-muted small">
+                            Mostrando {filteredLoans.length} de {activeLoans.length} registros
+                        </div>
                     </>
                 )}
 
