@@ -1,7 +1,8 @@
 import axios from "axios";
+import keycloak from "./keycloak"; // IMPORTANTE: Importamos la instancia configurada
 
 const instance = axios.create({
-  baseURL: "http://localhost:8080/",
+  baseURL: "http://localhost:8080", // Apunta a tu Gateway
   headers: {
     "Content-Type": "application/json"
   }
@@ -9,10 +10,9 @@ const instance = axios.create({
 
 instance.interceptors.request.use(
   (config) => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user && user.token) {
-      config.headers["Authorization"] = 'Bearer ' + user.token;
-      config.headers["X-User-Name"] = "admin"; 
+    // Si Keycloak tiene un token válido, lo agregamos
+    if (keycloak.token) {
+      config.headers["Authorization"] = 'Bearer ' + keycloak.token;
     }
     return config;
   },

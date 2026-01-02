@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  keycloak:
+    container_name: toolrent-keycloak
+    image: quay.io/keycloak/keycloak:24.0.1
+    command: start-dev --import-realm
+    environment:
+      # Conexión a tu Base de Datos PostgreSQL existente
+      # Usamos 'host.docker.internal' para que Keycloak (en Docker) vea tu Postgres (en local)
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://host.docker.internal:5432/db_keycloak
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: admin  
+      
+      # Credenciales del Super Admin de Keycloak (para entrar a la consola)
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      
+      # Configuración para desarrollo (deshabilita HTTPS obligatorio)
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME: localhost
+    ports:
+      # Se Mapea el puerto 8080 del contenedor al 8090 de tu PC
+      # Para no chocar con el Gateway que usa el 8080
+      - "8090:8080"
+    volumes:
+      # Opc: Si en el futuro exportas tu configuración de roles, 
+      # la guardas en esta carpeta para que se cargue sola.
+      - ./realm-config:/opt/keycloak/data/import
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
