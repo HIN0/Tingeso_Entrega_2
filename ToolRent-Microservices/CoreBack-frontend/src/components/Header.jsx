@@ -30,7 +30,7 @@ return (
     </button>
 
     <div className="collapse navbar-collapse" id="navbarNav">
-        <ul className="navbar-nav ms-auto align-items-center">
+        <ul className="navbar-nav ms-auto">
         <li className="nav-item">
             <Link className="nav-link" to="/tools">Herramientas</Link>
         </li>
@@ -47,7 +47,7 @@ return (
             <Link className="nav-link" to="/kardex">Kardex</Link>
         </li>
         <li className="nav-item">
-            <Link className="nav-link fw-bold" to="/reports">Reportes 📊</Link>
+            <Link className="nav-link fw-bold" to="/reports">Reportes</Link>
         </li>
 
         {/* --- SECCIÓN DE AUTENTICACIÓN (LOGIN / LOGOUT) --- */}
