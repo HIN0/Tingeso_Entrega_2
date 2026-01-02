@@ -118,7 +118,7 @@
             <thead className="table-dark">
             <tr>
                 <th>Fecha</th>
-                <th>Herramienta (ID)</th>
+                <th>(ID) Herramienta</th>
                 <th>Tipo Movimiento</th>
                 <th>Cantidad</th>
                 <th>Usuario</th>
@@ -131,7 +131,7 @@
                     <td>{mov.date}</td>
                     <td>
                         {/* Mostramos el nombre si existe, sino el ID */}
-                        {toolsMap[mov.toolId] ? `${toolsMap[mov.toolId]} (ID: ${mov.toolId})` : `ID: ${mov.toolId}`}
+                        {toolsMap[mov.toolId] ? `(ID: ${mov.toolId}) ${toolsMap[mov.toolId]}` : `ID: ${mov.toolId}`}
                     </td>
                     <td>
                     <span className={`badge ${getBadgeClass(mov.movementType)}`}>
