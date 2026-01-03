@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import ClientService from "../services/client.service";
 import LoanService from "../services/loan.service";
-import { data, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
+import keycloak from "../keycloak"; // 1. Importamos Keycloak para validar rol
 
 const ClientList = () => {
   const [clients, setClients] = useState([]);
@@ -13,6 +14,9 @@ const ClientList = () => {
   
   // Estado para mensajes en pantalla 
   const [notification, setNotification] = useState({ message: "", type: "" });
+
+  // 2. Verificar si es ADMIN
+  const isAdmin = keycloak.tokenParsed?.realm_access?.roles?.includes('ADMIN');
 
   useEffect(() => {
     loadData();
@@ -49,8 +53,6 @@ const loadData = () => {
   // --- LÓGICA DE ACCIONES MODIFICADA ---
   const handleActionClick = (client) => {
     if (client.status === "ACTIVE") {
-        // Restricción Directa (Reemplazamos window.confirm por una acción directa con mensaje)
-        // O si prefieres mantener confirmación, usa un modal. Aquí lo haré directo para fluidez.
         ClientService.changeStatus(client.id, "RESTRICTED")
             .then(() => {
                 showMessage(`Cliente ${client.name} restringido correctamente.`, "warning");
@@ -80,8 +82,7 @@ const loadData = () => {
             showMessage("Deuda pagada. Cliente activado automáticamente.", "success");
         })
         .catch(e => {
-            // Mostrar error dentro del modal o en la tabla
-            alert("Error: " + e.message); // Aquí podrías dejar un alert o manejar un estado de error interno del modal
+            alert("Error: " + e.message); 
         });
   };
 
@@ -106,10 +107,12 @@ const loadData = () => {
         <div className="d-flex justify-content-between align-items-center mb-3">
             <h2>Gestión de Clientes</h2>
             
-            {/* --- BOTÓN AÑADIR NUEVO CLIENTE --- */}
-            <Link to="/clients/add" className="btn btn-success">
-                  + Añadir Nuevo Cliente
-            </Link>
+            {/* 3. RESTRICCIÓN: Solo ADMIN ve el botón de añadir */}
+            {isAdmin && (
+                <Link to="/clients/add" className="btn btn-success">
+                    + Añadir Nuevo Cliente
+                </Link>
+            )}
         </div>
 
       {/* BARRA DE NOTIFICACIÓN INTEGRADA */}
@@ -130,11 +133,13 @@ const loadData = () => {
             <th>Teléfono</th>
             <th>Balance (Deuda)</th>
             <th>Estado</th>
-            <th>Acción</th>
+            {/* 4. RESTRICCIÓN: Ocultar columna si no es ADMIN */}
+            {isAdmin && <th>Acción</th>}
           </tr>
         </thead>
         <tbody>
-          {clients.map(client => (
+          {clients
+          .map(client => (
             <tr key={client.id} className={client.status === 'RESTRICTED' ? 'table-danger' : ''}>
               <td>{client.id}</td>
               <td>{client.rut}</td>
@@ -149,20 +154,24 @@ const loadData = () => {
                     {client.status}
                 </span>
               </td>
-              <td>
-                <button 
-                    className={`btn btn-sm ${client.status === 'ACTIVE' ? 'btn-outline-danger' : 'btn-warning'}`}
-                    onClick={() => handleActionClick(client)}
-                >
-                    {client.status === 'ACTIVE' ? 'Restringir' : 'Gestionar / Activar'}
-                </button>
-              </td>
+              
+              {/* 5. RESTRICCIÓN: Ocultar botón de gestión si no es ADMIN */}
+              {isAdmin && (
+                  <td>
+                    <button 
+                        className={`btn btn-sm ${client.status === 'ACTIVE' ? 'btn-outline-danger' : 'btn-warning'}`}
+                        onClick={() => handleActionClick(client)}
+                    >
+                        {client.status === 'ACTIVE' ? 'Restringir' : 'Gestionar / Activar'}
+                    </button>
+                  </td>
+              )}
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* MODAL */}
+      {/* MODAL (Solo se abre si showModal es true, activado por handleActionClick que ya está oculto para empleados) */}
       {showModal && selectedClient && (
         <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
             <div className="modal-dialog modal-lg">

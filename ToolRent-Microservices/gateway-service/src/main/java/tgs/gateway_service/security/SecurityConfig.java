@@ -2,6 +2,7 @@ package tgs.gateway_service.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod; // IMPORTANTE
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -20,10 +21,16 @@ public class SecurityConfig {
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Activa CORS explícitamente
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/auth/**", "/eureka/**").permitAll() // Rutas públicas
-                .anyExchange().authenticated() // Todo lo demás requiere Token
+                // Permitir OPTIONS explícitamente para que el navegador no falle en CORS
+                .pathMatchers(HttpMethod.OPTIONS).permitAll()
+                
+                // Rutas públicas
+                .pathMatchers("/auth/**", "/eureka/**").permitAll()
+                
+                // Todo lo demás requiere autenticación
+                .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
@@ -33,9 +40,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // Tu Frontend
+        // Asegúrate de que este origen coincida exactamente con tu Frontend (sin slash al final)
+        configuration.setAllowedOrigins(List.of("http://localhost:5173")); 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-User-Name")); // Agregamos cabeceras comunes
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

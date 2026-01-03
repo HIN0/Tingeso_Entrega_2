@@ -98,6 +98,9 @@ return (
                     name="stock"
                 />
             </div>
+        </div>
+        
+        {/*
             <div className="col-md-6 mb-3">
                 <label className="form-label">Estado</label>
                 <select 
@@ -112,8 +115,8 @@ return (
                     <option value="DECOMMISSIONED">DECOMMISSIONED (De Baja)</option>
                 </select>
             </div>
-        </div>
-
+        */}
+        
         {/* Fila 3: En Reparación y Valor Reposición */}
         <div className="row">
             <div className="col-md-6 mb-3">

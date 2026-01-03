@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ToolService from "../services/tool.service";
 import { Link } from "react-router-dom";
+import keycloak from "../keycloak"; // 1. Importamos Keycloak para verificar el rol
 
 const ToolList = () => {
   const [tools, setTools] = useState([]);
@@ -9,6 +10,9 @@ const ToolList = () => {
   // Estados para el Modal de Edición
   const [editingTool, setEditingTool] = useState(null);
   const [editValue, setEditValue] = useState(0);
+
+  // 2. Verificar si es ADMIN (Revisa si el rol 'ADMIN' está en el token)
+  const isAdmin = keycloak.tokenParsed?.realm_access?.roles?.includes('ADMIN');
 
   useEffect(() => {
     retrieveTools();
@@ -78,9 +82,13 @@ const ToolList = () => {
       <div className="col-md-12">
         <div className="d-flex justify-content-between align-items-center mb-4 mt-4">
             <h2>Inventario de Herramientas</h2>
-            <Link to="/tools/add" className="btn btn-success">
-                + Añadir Nueva Herramienta
-            </Link>
+            
+            {/* 3. SOLO ADMIN puede ver el botón de Añadir */}
+            {isAdmin && (
+                <Link to="/tools/add" className="btn btn-success">
+                    + Añadir Nueva Herramienta
+                </Link>
+            )}
         </div>
 
         {error && <div className="alert alert-danger">Error de conexión con Inventario.</div>}
@@ -97,8 +105,9 @@ const ToolList = () => {
               <th>Stock</th>
               <th>En Reparación</th>
               <th>Valor Reposición</th>
-              <th>Acciones</th>
-              <th>Dar de Baja</th> 
+              {/* 4. Ocultar columnas de acciones si no es ADMIN */}
+              {isAdmin && <th>Acciones</th>}
+              {isAdmin && <th>Dar de Baja</th>}
             </tr>
           </thead>
           <tbody>
@@ -117,26 +126,31 @@ const ToolList = () => {
                   <td>{tool.inRepair}</td>
                   <td>${tool.replacementValue}</td>
                   
-                  {/* Botón EDITAR */}
-                  <td>
-                    <button className="btn btn-outline-primary btn-sm" onClick={() => openEditModal(tool)}>
-                        Edit
-                    </button>
-                  </td>
+                  {/* Botón EDITAR (Solo Admin) */}
+                  {isAdmin && (
+                    <td>
+                        <button className="btn btn-outline-primary btn-sm" onClick={() => openEditModal(tool)}>
+                            Edit
+                        </button>
+                    </td>
+                  )}
 
-                  {/* Botón DECOMMISSIONAR */}
-                  <td>
-                    <button 
-                        className="btn btn-danger btn-sm fw-bold" 
-                        onClick={() => handleDecommission(tool.id)}
-                    >
-                        DECOMMISSIONAR
-                    </button>
-                  </td>
+                  {/* Botón DECOMMISSIONAR (Solo Admin) */}
+                  {isAdmin && (
+                    <td>
+                        <button 
+                            className="btn btn-danger btn-sm fw-bold" 
+                            onClick={() => handleDecommission(tool.id)}
+                        >
+                            DECOMMISSIONAR
+                        </button>
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
-              <tr><td colSpan="9" className="text-center">No hay herramientas activas</td></tr>
+              // Ajustar el colspan dependiendo de si es admin o no (9 columnas con admin, 7 sin admin)
+              <tr><td colSpan={isAdmin ? "9" : "7"} className="text-center">No hay herramientas activas</td></tr>
             )}
           </tbody>
         </table>
@@ -170,7 +184,7 @@ const ToolList = () => {
           </tbody>
         </table>
 
-        {/* MODAL SIMPLE DE EDICIÓN (Overlay) */}
+        {/* MODAL SIMPLE DE EDICIÓN (Solo se renderiza si hay editingTool, que solo admin puede activar) */}
         {editingTool && (
             <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
                 <div className="modal-dialog">

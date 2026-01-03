@@ -9,6 +9,11 @@ const ActiveLoans = () => {
     const [selectedLoan, setSelectedLoan] = useState(null);
     const [isDamaged, setIsDamaged] = useState(false);
     const [isIrreparable, setIsIrreparable] = useState(false);
+    
+    // Nuevo estado auxiliar para manejar los Radio Buttons visualmente
+    // Valores posibles: 'GOOD', 'DAMAGED', 'IRREPARABLE'
+    const [returnCondition, setReturnCondition] = useState('GOOD'); 
+    
     const [msg, setMsg] = useState("");
 
     useEffect(() => {
@@ -23,9 +28,28 @@ const ActiveLoans = () => {
 
     const handleReturnClick = (loan) => {
         setSelectedLoan(loan);
+        // Se resetea el estado por defecto (Buen estado)
+        setReturnCondition('GOOD');
         setIsDamaged(false);
         setIsIrreparable(false);
         setMsg("");
+    };
+
+    // Función para manejar el cambio de los Radio Buttons
+    const handleConditionChange = (condition) => {
+        setReturnCondition(condition);
+        
+        // Lógica de mapeo para el backend
+        if (condition === 'GOOD') {
+            setIsDamaged(false);
+            setIsIrreparable(false);
+        } else if (condition === 'DAMAGED') {
+            setIsDamaged(true);
+            setIsIrreparable(false);
+        } else if (condition === 'IRREPARABLE') {
+            setIsDamaged(false); 
+            setIsIrreparable(true);
+        }
     };
 
     const confirmReturn = () => {
@@ -51,8 +75,8 @@ const ActiveLoans = () => {
                 <thead className="table-dark">
                     <tr>
                         <th>ID</th>
-                        <th>Fecha Inicio Préstamo</th>
-                        <th>Fecha Vencimiento Préstamo</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Vencimiento</th>
                         <th>Cliente</th>
                         <th>Herramienta</th>
                         <th>Status</th>
@@ -60,12 +84,14 @@ const ActiveLoans = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {loans.map(loan => (
+                    
+                    {loans
+                    .filter(loan => loan.status === "ACTIVE")
+                    .map(loan => (
                         <tr key={loan.id}>
                             <td>{loan.id}</td>
                             <td>{loan.loanDate}</td>
                             <td>{loan.deadlineDate}</td>
-                            {/* Nota: Si el backend no devuelve nombres en /active, solo verás IDs */}
                             <td>(ID: {loan.clientId}) {loan.clientName}</td> 
                             <td>(ID: {loan.toolId}) { loan.toolName}</td>
                             <td>{loan.status}</td>
@@ -82,37 +108,71 @@ const ActiveLoans = () => {
                 </tbody>
             </table>
 
-            {/* Simulación de Modal para Devolución */}
+            {/* Modal Simulado de Devolución */}
             {selectedLoan && (
-                <div className="card p-3 mt-3 border-danger">
-                    <h4>Confirmar Devolución (ID: {selectedLoan.id})</h4>
-                    <div className="form-check">
-                        <input 
-                            className="form-check-input" 
-                            type="checkbox" 
-                            checked={isDamaged}
-                            onChange={e => setIsDamaged(e.target.checked)}
-                        />
-                        <label className="form-check-label">¿Tiene Daños?</label>
-                    </div>
-                    
-                    {isDamaged && (
-                        <div className="form-check ms-4">
-                            <input 
-                                className="form-check-input" 
-                                type="checkbox" 
-                                checked={isIrreparable}
-                                onChange={e => setIsIrreparable(e.target.checked)}
-                            />
-                            <label className="form-check-label text-danger fw-bold">¿Es Irreparable (Destruida)?</label>
-                        </div>
-                    )}
+                <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Confirmar Devolución (ID: {selectedLoan.id})</h5>
+                                <button className="btn-close" onClick={() => setSelectedLoan(null)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <p>Seleccione el estado de la herramienta:</p>
+                                
+                                {/* OPCIÓN 1: BUEN ESTADO */}
+                                <div className="form-check mb-2">
+                                    <input 
+                                        className="form-check-input" 
+                                        type="radio" 
+                                        name="condition"
+                                        id="radioGood"
+                                        checked={returnCondition === 'GOOD'}
+                                        onChange={() => handleConditionChange('GOOD')}
+                                    />
+                                    <label className="form-check-label text-success fw-bold" htmlFor="radioGood">
+                                        En Buen Estado
+                                    </label>
+                                </div>
 
-                    <div className="mt-3">
-                        <button className="btn btn-success me-2" onClick={confirmReturn}>Confirmar</button>
-                        <button className="btn btn-secondary" onClick={() => setSelectedLoan(null)}>Cancelar</button>
+                                {/* OPCIÓN 2: CON DAÑOS */}
+                                <div className="form-check mb-2">
+                                    <input 
+                                        className="form-check-input" 
+                                        type="radio" 
+                                        name="condition"
+                                        id="radioDamaged"
+                                        checked={returnCondition === 'DAMAGED'}
+                                        onChange={() => handleConditionChange('DAMAGED')}
+                                    />
+                                    <label className="form-check-label text-warning fw-bold" htmlFor="radioDamaged">
+                                        Con Daños (Reparable)
+                                    </label>
+                                </div>
+
+                                {/* OPCIÓN 3: IRREPARABLE */}
+                                <div className="form-check mb-3">
+                                    <input 
+                                        className="form-check-input" 
+                                        type="radio" 
+                                        name="condition"
+                                        id="radioIrreparable"
+                                        checked={returnCondition === 'IRREPARABLE'}
+                                        onChange={() => handleConditionChange('IRREPARABLE')}
+                                    />
+                                    <label className="form-check-label text-danger fw-bold" htmlFor="radioIrreparable">
+                                        Irreparable (Pérdida Total)
+                                    </label>
+                                </div>
+                                
+                                {msg && <div className="alert alert-info">{msg}</div>}
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-secondary" onClick={() => setSelectedLoan(null)}>Cancelar</button>
+                                <button className="btn btn-success" onClick={confirmReturn}>Confirmar Devolución</button>
+                            </div>
+                        </div>
                     </div>
-                    {msg && <div className="text-info mt-2">{msg}</div>}
                 </div>
             )}
         </div>
